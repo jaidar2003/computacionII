@@ -1,4 +1,4 @@
-# Student Data
+# Informacion
 
 Universidad De Mendoza
 
