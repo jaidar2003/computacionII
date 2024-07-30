@@ -8,7 +8,6 @@ from dotenv import load_dotenv
 # Cargar las variables de entorno
 load_dotenv()
 
-
 ruta_imagen = os.getenv("RUTA_IMAGEN")
 def procesar_imagen_desde_env(nombre_var_env='RUTA_IMAGEN', ruta_salida='imagen_filtrada.jpg', num_procesos=4, sigma=1):
     """
@@ -21,7 +20,6 @@ def procesar_imagen_desde_env(nombre_var_env='RUTA_IMAGEN', ruta_salida='imagen_
     - num_procesos: int, número de procesos a usar para el filtrado.
     - sigma: float, desviación estándar para el filtro gaussiano.
     """
-
 
     if ruta_imagen is None:
         raise ValueError(f"La variable de entorno '{nombre_var_env}' no está definida.")
