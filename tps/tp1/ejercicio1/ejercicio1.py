@@ -2,10 +2,9 @@ import os
 from dotenv import load_dotenv
 from PIL import Image
 
-# Cargar las variables de entorno desde el archivo .env
+
 load_dotenv()
 
-# Obtener la ruta de la imagen desde la variable de entorno
 ruta_imagen = os.getenv("RUTA_IMAGEN")
 
 
