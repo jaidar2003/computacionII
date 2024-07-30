@@ -1,97 +1,97 @@
-import numpy as np
 import os
-import multiprocessing as mp
 from scipy.ndimage import gaussian_filter
-from skimage import io, util
+from PIL import Image
+import numpy as np
+import multiprocessing
 from dotenv import load_dotenv
-import matplotlib.pyplot as plt
 
+# Cargar las variables de entorno
 load_dotenv()
 
+
 ruta_imagen = os.getenv("RUTA_IMAGEN")
-ruta_carpeta_salida = os.getenv("RUTA_CARPETA_SALIDA")
+def procesar_imagen_desde_env(nombre_var_env='RUTA_IMAGEN', ruta_salida='imagen_filtrada.jpg', num_procesos=4, sigma=1):
+    """
+    Carga una imagen desde una ruta especificada en una variable de entorno, aplica un filtro gaussiano en paralelo,
+    y guarda la imagen filtrada.
+
+    Parámetros:
+    - nombre_var_env: str, nombre de la variable de entorno que contiene la ruta de la imagen.
+    - ruta_salida: str, ruta donde se guardará la imagen filtrada.
+    - num_procesos: int, número de procesos a usar para el filtrado.
+    - sigma: float, desviación estándar para el filtro gaussiano.
+    """
+
+
+    if ruta_imagen is None:
+        raise ValueError(f"La variable de entorno '{nombre_var_env}' no está definida.")
+
+    # Cargar la imagen
+    imagen = Image.open(ruta_imagen).convert('L')  # Convertir a escala de grises
+    array_imagen = np.array(imagen)
+
+    # Aplicar el filtro en paralelo
+    imagen_filtrada = procesar_imagen_en_paralelo(array_imagen, num_procesos=num_procesos, sigma=sigma)
+
+    # Convertir el array filtrado de nuevo a una imagen y guardarla
+    imagen_filtrada_pil = Image.fromarray(imagen_filtrada)
+    imagen_filtrada_pil.save(ruta_salida)
 
 def aplicar_filtro(parte_imagen, sigma=1):
+    """
+    Aplica un filtro gaussiano a una parte de la imagen.
+
+    Parámetros:
+    - parte_imagen: array de numpy, la parte de la imagen a la que se le aplicará el filtro.
+    - sigma: float, desviación estándar para el filtro gaussiano.
+
+    Retorna:
+    - array de numpy, la parte de la imagen filtrada.
+    """
     return gaussian_filter(parte_imagen, sigma=sigma)
 
-def procesar_parte_imagen(parte_imagen, cola_resultados, sigma=1, indice=0):
-    print(f"Procesando parte de la imagen {indice}...")
-    parte_filtrada = aplicar_filtro(parte_imagen, sigma)
-    cola_resultados.put((parte_filtrada, indice))
-    print(f"Parte de la imagen {indice} procesada.")
-
 def dividir_imagen(imagen, num_partes):
-    altura = imagen.shape[0]
+    """
+    Divide la imagen en partes iguales.
+
+    Parámetros:
+    - imagen: array de numpy, la imagen a dividir.
+    - num_partes: int, el número de partes en las que se dividirá la imagen.
+
+    Retorna:
+    - lista de arrays de numpy, partes de la imagen.
+    """
+    altura, ancho = imagen.shape
     altura_parte = altura // num_partes
-    partes = [(imagen[i*altura_parte:(i+1)*altura_parte, :], i) for i in range(num_partes)]
+    partes = [imagen[i * altura_parte:(i + 1) * altura_parte] for i in range(num_partes)]
     return partes
 
-def procesamiento_paralelo_imagen(imagen, num_partes, sigma=1):
-    partes = dividir_imagen(imagen, num_partes)
-    cola_resultados = mp.Queue()
-    procesos = []
+def procesar_imagen_en_paralelo(imagen, num_procesos=4, sigma=1):
+    """
+    Aplica un filtro a la imagen en paralelo usando múltiples procesos.
 
-    try:
-        for parte, indice in partes:
-            p = mp.Process(target=procesar_parte_imagen, args=(parte, cola_resultados, sigma, indice))
-            procesos.append(p)
-            p.start()
+    Parámetros:
+    - imagen: array de numpy, la imagen completa.
+    - num_procesos: int, el número de procesos a usar.
+    - sigma: float, desviación estándar para el filtro gaussiano.
 
-        print("Esperando la finalización de los procesos...")
-        for p in procesos:
-            p.join()
+    Retorna:
+    - array de numpy, la imagen completa filtrada.
+    """
+    # Dividir la imagen en partes
+    partes_imagen = dividir_imagen(imagen, num_procesos)
 
-        print("Recuperando resultados de la cola...")
-        partes_filtradas = [None] * num_partes
-        while not cola_resultados.empty():
-            parte_filtrada, indice = cola_resultados.get()
-            partes_filtradas[indice] = parte_filtrada
+    # Crear un pool de procesos
+    with multiprocessing.Pool(processes=num_procesos) as pool:
+        # Mapear la función aplicar_filtro a las partes de la imagen
+        partes_filtradas = pool.starmap(aplicar_filtro, [(parte, sigma) for parte in partes_imagen])
 
-        # Encontrar la forma mínima entre todas las partes filtradas
-        forma_minima = min(parte_filtrada.shape for parte_filtrada in partes_filtradas)
+    # Combinar las partes filtradas
+    imagen_filtrada = np.vstack(partes_filtradas)
 
-        # Recortar todas las partes al tamaño de la parte más pequeña
-        partes_recortadas = [parte_filtrada[:forma_minima[0], :forma_minima[1]] for parte_filtrada in partes_filtradas]
-
-        print("Procesamiento en paralelo completado.")
-        return np.vstack(partes_recortadas)
-    except KeyboardInterrupt:
-        print("Proceso interrumpido manualmente.")
-        for p in procesos:
-            p.terminate()
-        raise
+    return imagen_filtrada
 
 
-def guardar_imagenes_procesadas(imagen_procesada, ruta_carpeta_salida):
-    if not os.path.exists(ruta_carpeta_salida):
-        print(f"La carpeta de salida {ruta_carpeta_salida} no existe. Creando la carpeta...")
-        os.makedirs(ruta_carpeta_salida)
-    else:
-        print(f"La carpeta de salida {ruta_carpeta_salida} ya existe.")
-
-    for i, parte_filtrada in enumerate(imagen_procesada):
-        nombre_archivo = os.path.join(ruta_carpeta_salida, f"parte_{i}.png")
-        print(f"Guardando imagen procesada {i} en {nombre_archivo}")
-        try:
-            io.imsave(nombre_archivo, util.img_as_ubyte(parte_filtrada))
-            print(f"Imagen procesada {i} guardada exitosamente.")
-        except Exception as e:
-            print(f"Error al guardar la imagen procesada {i}: {e}")
-
-
-def main():
-    imagen = io.imread(ruta_imagen, as_gray=True)
-    num_partes = 4
-    sigma = 2
-    imagen_procesada = procesamiento_paralelo_imagen(imagen, num_partes, sigma)
-
-
-    guardar_imagenes_procesadas(imagen_procesada, ruta_carpeta_salida)
-
-    plt.figure(figsize=(10, 5))
-    plt.title("Imagen Original")
-    plt.imshow(imagen, cmap='gray')
-    plt.show()
 
 if __name__ == "__main__":
-    main()
+    procesar_imagen_desde_env()
