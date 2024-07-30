@@ -91,7 +91,5 @@ def procesar_imagen_en_paralelo(imagen, num_procesos=4, sigma=1):
 
     return imagen_filtrada
 
-
-
 if __name__ == "__main__":
     procesar_imagen_desde_env()
