@@ -2,11 +2,11 @@ import os
 from dotenv import load_dotenv
 from PIL import Image
 
-
+# Cargar las variables de entorno
 load_dotenv()
 
+# Obtener la ruta de la imagen desde las variables de entorno
 ruta_imagen = os.getenv("RUTA_IMAGEN")
-
 
 def cargar_y_dividir_imagen(ruta_imagen, n_partes):
     """
@@ -29,21 +29,23 @@ def cargar_y_dividir_imagen(ruta_imagen, n_partes):
 
     return partes
 
-
-def mostrar_partes(partes):
+def guardar_partes(partes, ruta_salida_base):
     """
-    Mostrar las partes de una imagen.
+    Guardar las partes de una imagen en archivos.
 
     :param partes: Una lista de partes de la imagen.
+    :param ruta_salida_base: Ruta base para guardar las partes de la imagen.
     """
     for i, parte in enumerate(partes):
-        parte.show(title=f'Parte {i + 1}')
-
+        ruta_salida = f'{ruta_salida_base}_parte_{i + 1}.png'
+        parte.save(ruta_salida)
+        print(f'Parte {i + 1} guardada en: {ruta_salida}')
 
 if __name__ == "__main__":
     try:
         n_partes = int(input('Ingrese el número de partes que quiera: '))
         partes = cargar_y_dividir_imagen(ruta_imagen, n_partes)
-        mostrar_partes(partes)
+        ruta_salida_base = 'parte_imagen'  # Ruta base para los archivos guardados
+        guardar_partes(partes, ruta_salida_base)
     except Exception as e:
         print(f"Ocurrió un error: {e}")
