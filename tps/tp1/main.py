@@ -1,4 +1,3 @@
-# main.py
 import os
 from dotenv import load_dotenv
 from PIL import Image
@@ -22,6 +21,9 @@ def combinar_imagenes(partes, ruta_salida):
     :param partes: Lista de imágenes (partes) a combinar.
     :param ruta_salida: Ruta donde se guardará la imagen combinada.
     """
+    if not partes:
+        raise ValueError("No hay partes de imágenes para combinar.")
+
     alturas = [parte.height for parte in partes]
     ancho = partes[0].width
     altura_total = sum(alturas)
@@ -30,6 +32,8 @@ def combinar_imagenes(partes, ruta_salida):
 
     y_offset = 0
     for parte in partes:
+        if parte.width != ancho:
+            raise ValueError("Las imágenes deben tener el mismo ancho para combinarse.")
         imagen_combinada.paste(parte, (0, y_offset))
         y_offset += parte.height
 
