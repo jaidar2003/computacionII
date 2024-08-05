@@ -6,40 +6,44 @@ from tps.tp1.comunicacion_sincronizacion.ejercicio3 import procesar_imagen_con_c
 from tps.tp1.manejo_senhales.ejercicio4 import manejar_senal, interrumpido
 from tps.tp1.memoria_compartida.ejercicio5 import procesar_imagen_con_memoria_compartida
 
-
 # Cargar las variables de entorno
 load_dotenv()
 
 # Obtener la ruta de la imagen desde las variables de entorno
 ruta_imagen = os.getenv("RUTA_IMAGEN")
 
+# Definir la ruta de la carpeta de destino para la imagen combinada
+carpeta_destino = 'ruta/a/carpeta_destino'
 
-def combinar_imagenes(partes, ruta_salida):
+# Asegurarse de que la carpeta de destino existe
+if not os.path.exists(carpeta_destino):
+    os.makedirs(carpeta_destino)
+
+def combinar_imagenes_cuadricula(partes, ruta_salida):
     """
-    Combinar partes de imágenes en una sola imagen.
+    Combina partes de imágenes en una cuadrícula 2x2.
 
     :param partes: Lista de imágenes (partes) a combinar.
     :param ruta_salida: Ruta donde se guardará la imagen combinada.
     """
-    if not partes:
-        raise ValueError("No hay partes de imágenes para combinar.")
+    if len(partes) != 4:
+        raise ValueError("Debe haber exactamente 4 imágenes para combinar en una cuadrícula 2x2.")
 
-    alturas = [parte.height for parte in partes]
-    ancho = partes[0].width
-    altura_total = sum(alturas)
+    # Asumimos que todas las imágenes tienen el mismo tamaño
+    ancho, alto = partes[0].size
+    ancho_total = 2 * ancho
+    alto_total = 2 * alto
 
-    imagen_combinada = Image.new('L', (ancho, altura_total))
+    imagen_combinada = Image.new('L', (ancho_total, alto_total))
 
-    y_offset = 0
-    for parte in partes:
-        if parte.width != ancho:
-            raise ValueError("Las imágenes deben tener el mismo ancho para combinarse.")
-        imagen_combinada.paste(parte, (0, y_offset))
-        y_offset += parte.height
+    # Colocar las imágenes en la cuadrícula
+    for i, parte in enumerate(partes):
+        x_offset = (i % 2) * ancho
+        y_offset = (i // 2) * alto
+        imagen_combinada.paste(parte, (x_offset, y_offset))
 
     imagen_combinada.save(ruta_salida)
     print(f'Imagen combinada guardada en: {ruta_salida}')
-
 
 if __name__ == "__main__":
     import signal
@@ -72,9 +76,15 @@ if __name__ == "__main__":
             # Cargar las partes filtradas
             partes_filtradas = [Image.open(ruta) for ruta in rutas_filtradas]
 
-            # Combinar las partes filtradas en una sola imagen
-            ruta_imagen_combinada = 'imagen_combinada.png'
-            combinar_imagenes(partes_filtradas, ruta_imagen_combinada)
+            # Verificar que haya exactamente 4 imágenes para combinar en una cuadrícula 2x2
+            if len(partes_filtradas) == 4:
+                # Definir la ruta de salida para la imagen combinada
+                ruta_imagen_combinada = os.path.join(carpeta_destino, 'imagen_combinada.png')
+
+                # Combinar las partes filtradas en una cuadrícula 2x2
+                combinar_imagenes_cuadricula(partes_filtradas, ruta_imagen_combinada)
+            else:
+                print("Se requiere exactamente 4 imágenes para combinar en una cuadrícula 2x2.")
 
     except Exception as e:
         print(f"Ocurrió un error: {e}")

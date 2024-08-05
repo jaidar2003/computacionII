@@ -4,7 +4,7 @@ import numpy as np
 import multiprocessing
 from multiprocessing import Pipe
 from dotenv import load_dotenv
-from PIL import Image  # Importar Image desde PIL
+from PIL import Image
 
 # Agregar el directorio raíz al path
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
@@ -19,7 +19,7 @@ ruta_imagen = os.getenv("RUTA_IMAGEN")
 
 def procesar_imagen_con_comunicacion(nombre_var_env='RUTA_IMAGEN', ruta_salida='imagen_filtrada.jpg', num_procesos=4, sigma=1):
     """
-    Carga una imagen desde una ruta especificada en una variable de entorno, aplica un filtro gaussiano en paralelo
+    Carga una imagen desde una ruta especificada en una variable de entorno, aplica un filtro en paralelo
     con comunicación entre procesos, y guarda la imagen filtrada.
 
     :param nombre_var_env: Nombre de la variable de entorno que contiene la ruta de la imagen.
@@ -31,7 +31,7 @@ def procesar_imagen_con_comunicacion(nombre_var_env='RUTA_IMAGEN', ruta_salida='
         raise ValueError(f"La variable de entorno '{nombre_var_env}' no está definida.")
 
     # Cargar la imagen
-    imagen = Image.open(ruta_imagen)  # Convertir a escala de grises
+    imagen = Image.open(ruta_imagen).convert('L')  # Convertir a escala de grises
     array_imagen = np.array(imagen)
 
     # Dividir la imagen en partes iguales
@@ -58,8 +58,15 @@ def procesar_imagen_con_comunicacion(nombre_var_env='RUTA_IMAGEN', ruta_salida='
     # Combinar las partes filtradas
     imagen_filtrada = np.vstack(partes_filtradas)
 
-    # Guardar la imagen filtrada
-    imagen_filtrada_pil = Image.fromarray(imagen_filtrada)
+    # Normalizar los valores de los píxeles
+    imagen_filtrada = np.clip(imagen_filtrada, 0, 255)
+    imagen_filtrada = (imagen_filtrada - np.min(imagen_filtrada)) / (np.max(imagen_filtrada) - np.min(imagen_filtrada)) * 255
+
+    # Convertir a uint8 para PIL
+    imagen_filtrada = imagen_filtrada.astype(np.uint8)
+
+    # Crear y guardar la imagen filtrada
+    imagen_filtrada_pil = Image.fromarray(imagen_filtrada, mode='L')
     imagen_filtrada_pil.save(ruta_salida)
 
 def procesar_parte(parte, sigma, conn):
