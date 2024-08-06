@@ -4,12 +4,29 @@ from scipy.ndimage import gaussian_filter
 import multiprocessing
 import signal
 import sys
+import logging
+# from multiprocessing import Pool
+# from concurrent.futures import ProcessPoolExecutor
+from numba import jit
+
+logging.basicConfig(level=logging.INFO)
+logger = logging.getLogger(__name__)
+
+
+@jit
+def aplicar_filtro_optimized(array_imagen):
+    return gaussian_filter(array_imagen, sigma=2)
 
 def cargar_imagen(ruta_imagen):
     """
     Carga una imagen desde la ruta especificada.
     """
-    return Image.open(ruta_imagen)
+    try:
+        return Image.open(ruta_imagen)
+    except Exception as e:
+        print(f"Error al cargar la imagen: {e}")
+        sys.exit(1)
+
 
 def dividir_imagen(imagen, n):
     """
@@ -48,6 +65,14 @@ def aplicar_filtro(parte_imagen, conexion_pipe):
     conexion_pipe.send(np.array(imagen_desenfocada))
     conexion_pipe.close()
 
+# def aplicar_filtro(parte_imagen):
+#     """
+#     Aplica un filtro gaussiano a una parte de la imagen.
+#     """
+#     array_imagen = np.array(parte_imagen)
+#     array_desenfocado = gaussian_filter(array_imagen, sigma=2)
+#     return Image.fromarray(array_desenfocado)
+
 def procesar_partes_imagen_con_pipes(partes_imagen):
     """
     Procesa las partes de la imagen en paralelo usando pipes para la comunicación.
@@ -71,6 +96,25 @@ def procesar_partes_imagen_con_pipes(partes_imagen):
         p.join()
 
     return partes_procesadas
+
+# def procesar_partes_imagen_con_pool(partes_imagen):
+#     """
+#     Procesa las partes de la imagen en paralelo usando un Pool de procesos.
+#
+#     Parámetros:
+#     - partes_imagen: Lista de partes de la imagen.
+#
+#     Retorna:
+#     - Lista de partes de la imagen procesadas.
+#     """
+#     with Pool() as pool:
+#         partes_procesadas = pool.map(aplicar_filtro, partes_imagen)
+#     return partes_procesadas
+
+# def procesar_partes_imagen_con_executor(partes_imagen):
+#     with ProcessPoolExecutor() as executor:
+#         partes_procesadas = list(executor.map(aplicar_filtro, partes_imagen))
+#     return partes_procesadas
 
 def almacenar_parte_en_memoria_compartida(array_compartido, indice_parte, parte_imagen, ancho, alto):
     """
