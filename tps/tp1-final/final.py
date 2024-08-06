@@ -5,13 +5,11 @@ import multiprocessing
 import signal
 import sys
 
-
 def cargar_imagen(ruta_imagen):
     """
     Carga una imagen desde la ruta especificada.
     """
     return Image.open(ruta_imagen)
-
 
 def dividir_imagen(imagen, n):
     """
@@ -36,7 +34,6 @@ def dividir_imagen(imagen, n):
 
     return partes_imagen
 
-
 def aplicar_filtro(parte_imagen, conexion_pipe):
     """
     Aplica un filtro gaussiano a una parte de la imagen y envía el resultado a través del pipe.
@@ -50,7 +47,6 @@ def aplicar_filtro(parte_imagen, conexion_pipe):
     imagen_desenfocada = Image.fromarray(array_desenfocado)
     conexion_pipe.send(np.array(imagen_desenfocada))
     conexion_pipe.close()
-
 
 def procesar_partes_imagen_con_pipes(partes_imagen):
     """
@@ -76,7 +72,6 @@ def procesar_partes_imagen_con_pipes(partes_imagen):
 
     return partes_procesadas
 
-
 def almacenar_parte_en_memoria_compartida(array_compartido, indice_parte, parte_imagen, ancho, alto):
     """
     Almacena una parte de la imagen en la memoria compartida.
@@ -94,7 +89,6 @@ def almacenar_parte_en_memoria_compartida(array_compartido, indice_parte, parte_
     fin = inicio + len(plano)
     array_compartido[inicio:fin] = plano
 
-
 def crear_memoria_compartida(partes_imagen):
     """
     Crea un array de memoria compartida para almacenar las partes de la imagen.
@@ -108,7 +102,6 @@ def crear_memoria_compartida(partes_imagen):
     ancho, alto = partes_imagen[0].size
     tamaño_total = ancho * alto * len(partes_imagen) * 3
     return multiprocessing.Array('B', tamaño_total), ancho, alto
-
 
 def cargar_parte_memoria_compartida(array_compartido, indice_parte, ancho, alto):
     """
@@ -127,7 +120,6 @@ def cargar_parte_memoria_compartida(array_compartido, indice_parte, ancho, alto)
     fin = inicio + ancho * alto * 3
     array_imagen = np.frombuffer(array_compartido.get_obj(), dtype=np.uint8)[inicio:fin]
     return Image.fromarray(array_imagen.reshape((alto, ancho, 3)))
-
 
 def usar_memoria_compartida(partes_imagen):
     """
@@ -155,7 +147,6 @@ def usar_memoria_compartida(partes_imagen):
                       range(len(partes_imagen))]
     return partes_finales
 
-
 def guardar_partes_imagen(partes_imagen, prefijo="parte"):
     """
     Guarda cada parte de la imagen en un archivo separado.
@@ -167,7 +158,6 @@ def guardar_partes_imagen(partes_imagen, prefijo="parte"):
     for i, parte in enumerate(partes_imagen):
         parte.save(f"{prefijo}_{i + 1}.png")
         print(f"{prefijo} {i + 1} guardado como {prefijo}_{i + 1}.png")
-
 
 def guardar_imagen_combinada(partes_finales, nombre_archivo_salida="imagen_combinada.png"):
     """
@@ -190,7 +180,6 @@ def guardar_imagen_combinada(partes_finales, nombre_archivo_salida="imagen_combi
     imagen_combinada.save(nombre_archivo_salida)
     print(f"Imagen combinada guardada como {nombre_archivo_salida}")
 
-
 def manejar_senal(sig, frame):
     """
     Manejador de señales para limpiar y salir del programa.
@@ -198,13 +187,11 @@ def manejar_senal(sig, frame):
     print('Señal recibida, limpiando...')
     sys.exit(0)
 
-
 def configurar_manejo_senal():
     """
     Configura el manejo de señales para interrupciones del teclado (Ctrl+C).
     """
     signal.signal(signal.SIGINT, manejar_senal)
-
 
 def procesar_imagen(ruta_imagen, n):
     """
@@ -222,8 +209,7 @@ def procesar_imagen(ruta_imagen, n):
     partes_finales = usar_memoria_compartida(partes_desenfocadas)
     guardar_imagen_combinada(partes_finales, nombre_archivo_salida="imagen_combinada_final.png")
 
-
 if __name__ == "__main__":
     ruta_imagen = 'flag.jpeg'
-    n = 4
+    n = 4 # o n
     procesar_imagen(ruta_imagen, n)
