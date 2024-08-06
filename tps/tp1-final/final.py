@@ -222,11 +222,6 @@ def procesar_imagen(ruta_imagen, n):
     partes_finales = usar_memoria_compartida(partes_desenfocadas)
     guardar_imagen_combinada(partes_finales, nombre_archivo_salida="imagen_combinada_final.png")
 
-
-# Ejemplo de uso
-# procesar_imagen('ruta_a_la_imagen.jpg', 4)
-
-
 if __name__ == "__main__":
     ruta_imagen = 'flag.jpeg'
     n = 4
