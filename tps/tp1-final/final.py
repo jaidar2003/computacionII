@@ -111,7 +111,6 @@ def procesar_partes_imagen_con_pipes(partes_imagen):
 #         partes_procesadas = pool.map(aplicar_filtro, partes_imagen)
 #     return partes_procesadas
 
-
 # def procesar_partes_imagen_con_executor(partes_imagen):
 #     with ProcessPoolExecutor() as executor:
 #         partes_procesadas = list(executor.map(aplicar_filtro, partes_imagen))
