@@ -211,5 +211,5 @@ def procesar_imagen(ruta_imagen, n):
 
 if __name__ == "__main__":
     ruta_imagen = 'flag.jpeg'
-    n = 4
+    n = 4 # o n
     procesar_imagen(ruta_imagen, n)
