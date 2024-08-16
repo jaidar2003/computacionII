@@ -1,9 +1,7 @@
-# Informacion
+# Universidad de Mendoza
 
-Universidad De Mendoza
+Computación II
 
-Computacion II
-
-Juan Manuel Aidar "62005" 
+Juan Manuel Aidar "62005"
 
 2024
