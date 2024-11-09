@@ -6,6 +6,7 @@ import logging
 
 logging.basicConfig(level=logging.INFO)
 
+
 async def handle(request):
     logging.info("Received request")
     data = await request.post()
@@ -13,8 +14,9 @@ async def handle(request):
     image = Image.open(io.BytesIO(image_data)).convert('L')
     logging.info("Image converted to grayscale")
 
-    # Send the image to the scaling server
-    scaled_image = await send_to_scaling_server(image)
+    # Send the image to the scaling server with a scale factor
+    scale_factor = 50  # Example scale factor (50%)
+    scaled_image = await send_to_scaling_server(image, scale_factor)
     logging.info("Image sent to scaling server and received back")
 
     # Convert the scaled image to bytes
@@ -24,10 +26,17 @@ async def handle(request):
 
     return web.Response(body=img_byte_arr, content_type='image/png')
 
-async def send_to_scaling_server(image):
+
+async def send_to_scaling_server(image, scale_factor):
     reader, writer = await asyncio.open_connection('127.0.0.1', 8889)
     image_bytes = io.BytesIO()
     image.save(image_bytes, format='PNG')
+
+    # Send the scale factor first
+    writer.write(scale_factor.to_bytes(4, byteorder='little'))
+    await writer.drain()
+
+    # Send the image data
     writer.write(image_bytes.getvalue())
     await writer.drain()
     logging.info("Image sent to scaling server")
@@ -41,10 +50,12 @@ async def send_to_scaling_server(image):
 
     return scaled_image
 
+
 def start_http_server():
     app = web.Application()
     app.add_routes([web.post('/process', handle)])
     web.run_app(app, port=8080)
+
 
 if __name__ == '__main__':
     start_http_server()
