@@ -8,7 +8,7 @@ import requests
 
 def main():
     parser = argparse.ArgumentParser(description='Process an image.')
-    parser.add_argument('--input', default='/home/juanma/PycharmProjects/compu2/tps/tp2/imagen.png', help='Path to the input image')
+    parser.add_argument('--input', default='/home/juanma/PycharmProjects/compu2/tps/tp2/entrada.png', help='Path to the input image')
     args = parser.parse_args()
 
     input_path = args.input
