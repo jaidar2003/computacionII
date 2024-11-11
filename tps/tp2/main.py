@@ -46,9 +46,10 @@ def send_image_for_processing(image_path):
         response = requests.post(url, files=files)
 
     if response.status_code == 200:
-        with open('resultado.png', 'wb') as output_file:
+        output_path = os.path.join(os.path.dirname(image_path), 'imagenes', 'resultado.png')
+        with open(output_path, 'wb') as output_file:
             output_file.write(response.content)
-        print("Imagen procesada guardada como 'resultado.png'")
+        print(f"Imagen procesada guardada como '{output_path}'")
     else:
         print("Error en el procesamiento:", response.text)
 
