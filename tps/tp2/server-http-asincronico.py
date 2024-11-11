@@ -3,9 +3,9 @@ from aiohttp import web
 from PIL import Image
 import io
 import logging
+import socket
 
 logging.basicConfig(level=logging.INFO)
-
 
 async def handle(request):
     logging.info("Received request")
@@ -25,7 +25,6 @@ async def handle(request):
     img_byte_arr = img_byte_arr.getvalue()
 
     return web.Response(body=img_byte_arr, content_type='image/png')
-
 
 async def send_to_scaling_server(image, scale_factor):
     reader, writer = await asyncio.open_connection('127.0.0.1', 8889)
@@ -50,12 +49,17 @@ async def send_to_scaling_server(image, scale_factor):
 
     return scaled_image
 
+def is_port_in_use(port):
+    with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
+        return s.connect_ex(('127.0.0.1', port)) == 0
 
 def start_http_server():
-    app = web.Application()
+    app = web.Application(client_max_size=2*1024*1024)  # Increase max size to 2MB
     app.add_routes([web.post('/process', handle)])
-    web.run_app(app, port=8080)
-
+    port = 8080
+    while is_port_in_use(port):
+        port += 1
+    web.run_app(app, port=port)
 
 if __name__ == '__main__':
     start_http_server()

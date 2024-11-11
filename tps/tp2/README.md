@@ -34,15 +34,20 @@
 
 ## Envío de una imagen para procesamiento
 
-1. Asegúrate de tener una imagen llamada `imagen.png` en el directorio del proyecto.
+1. Asegúrate de tener una imagen llamada `entrada.png` en el directorio del proyecto.
 2. Abre una nueva terminal y navega al directorio del proyecto.
 3. Ejecuta el siguiente comando para enviar la imagen al servidor HTTP para su procesamiento:
 
     ```sh
-    python tps/tp2/prueba.py
+    python tps/tp2/main.py --input tps/tp2/imagenes/entrada.png
+    ```
+4. Alternativamente, puedes enviar la imagen al servidor HTTP utilizando `curl`:
+
+    ```sh
+    curl -X POST -F 'image=@/home/juanma/PycharmProjects/compu2/tps/tp2/imagenes/entrada.png' http://127.0.0.1:8080/process -o resultado.png"
     ```
 
-4. Si el procesamiento es exitoso, la imagen procesada se guardará como `resultado.png` en el directorio del proyecto.
+5. Si el procesamiento es exitoso, la imagen procesada se guardará como `resultado.png` en el directorio del proyecto.
 
 ## Notas
 

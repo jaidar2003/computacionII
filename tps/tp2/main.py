@@ -1,3 +1,4 @@
+# python3 main.py --input /home/juanma/PycharmProjects/compu2/tps/tp2/imagenes/entrada.png
 import multiprocessing
 import subprocess
 import argparse
