@@ -3,7 +3,6 @@
 Este proyecto implementa un servidor de archivos concurrente con acceso remoto usando Python. 
 El servidor permite que múltiples clientes se conecten y soliciten archivos de manera concurrente.
 
-## Estructura del Proyecto
 ## Configuración del Servidor
 
 1. **Navegar al directorio del servidor:**
