@@ -8,10 +8,8 @@ WORKDIR /app
 COPY servidor.py ./  # Archivo del servidor
 COPY archivos ./archivos  # Carpeta para almacenar los archivos
 
-# Instalar dependencias si es necesario
-# Por ejemplo, si tienes un requirements.txt:
-# COPY requirements.txt ./
-# RUN pip install -r requirements.txt
+# Crear la carpeta de archivos si no existe y asignar permisos adecuados
+RUN mkdir -p /app/archivos && chmod -R 755 /app/archivos
 
 # Exponer el puerto en el que el servidor escucha
 EXPOSE 8080

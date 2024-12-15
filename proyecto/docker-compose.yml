@@ -3,7 +3,7 @@ version: '3.8'
 services:
   servidor:
     build:
-      context: ./servidor  # Ruta donde está el Dockerfile del servidor
+      context: ./servidor  # Ruta donde está el Dockerfile-Servidor-Cliente del servidor
     ports:
       - "8080:8080"  # Mapea el puerto del host al contenedor
     volumes:
@@ -11,6 +11,6 @@ services:
 
   cliente:
     build:
-      context: ./cliente  # Ruta donde está el Dockerfile del cliente
+      context: ./cliente  # Ruta donde está el Dockerfile-Servidor-Cliente del cliente
     stdin_open: true  # Permite interacción en la terminal
     tty: true  # Activa un terminal interactivo
