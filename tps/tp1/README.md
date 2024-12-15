@@ -1,4 +1,3 @@
-El tp final es el archivo que esta en la carpeta tp1-final; las otras carpetas tienen otra orientacion del problema
 # Procesamiento Paralelo de Imágenes
 
 Este script en Python procesa imágenes en paralelo. Divide una imagen en partes, aplica un filtro de desenfoque a cada parte, y combina las partes procesadas en una imagen final.
