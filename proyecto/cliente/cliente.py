@@ -47,7 +47,8 @@ class ClienteArchivos:
         self.socket_cliente.close()
         print('Desconectado del servidor.')
 
-if __name__ == '__main__':
+
+def menu_principal():
     cliente = ClienteArchivos()
     while True:
         print('\nOpciones:')
@@ -69,3 +70,7 @@ if __name__ == '__main__':
             break
         else:
             print('Opción inválida.')
+
+if __name__ == '__main__':
+    menu_principal()
+    cliente = ClienteArchivos()
