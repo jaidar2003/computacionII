@@ -112,8 +112,11 @@ PUT ejemplo2.txt
 ## ⚠️ Notas Importantes
 
 1.Asegúrate de que el directorio archivos/ exista en el servidor para almacenar y acceder a los archivos.
+
 2.Ejecuta el servidor antes de ejecutar el cliente para establecer la conexión.
+
 3.El servidor y el cliente deben usar los mismos certificados y claves para conectarse de forma segura.
+
 4.El servidor utiliza SSL/TLS, por lo que el cliente debe estar configurado para conectarse a un servidor seguro.
 
 
