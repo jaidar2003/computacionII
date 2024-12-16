@@ -3,6 +3,23 @@
 Este proyecto implementa un servidor de archivos concurrente con acceso remoto usando Python. 
 El servidor permite que múltiples clientes se conecten y soliciten archivos de manera concurrente.
 
+
+## Estructura del Proyecto
+    ```bash
+        proyecto/
+        ├── cliente/
+        │   ├── cliente.py         # Script del cliente
+        │   ├── Dockerfile         # Dockerfile para el cliente
+        ├── servidor/
+        │   ├── servidor.py        # Script del servidor
+        │   ├── Dockerfile         # Dockerfile para el servidor
+        │   ├── archivos/          # Carpeta para almacenar archivos en el servidor
+        ├── README.md              # Documentación del proyecto
+        ├── docker-compose.yml     # Orquestación con Docker Compose
+        ├── requirements.txt       # Dependencias del proyecto
+    ```
+
+
 ## Configuración del Servidor
 
 1. **Navegar al directorio del servidor:**

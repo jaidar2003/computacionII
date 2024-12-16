@@ -2,6 +2,7 @@ import os
 import socket
 import threading
 import asyncio
+import logging
 
 class ServidorArchivos:
     def __init__(self, host='localhost', puerto=8080):
@@ -74,6 +75,9 @@ class ServidorArchivos:
                 archivo.write(datos)
         cliente_socket.sendall('Archivo subido correctamente'.encode())
 
+    def validar_ruta(nombre_archivo):
+        return os.path.basename(nombre_archivo) == nombre_archivo
+
     def crear_archivo(self, cliente_socket, nombre_archivo):
         ruta_archivo = os.path.join(self.directorio_archivos, nombre_archivo)
         if not os.path.exists(ruta_archivo):
@@ -103,6 +107,7 @@ class ServidorArchivos:
         while True:
             cliente_socket, direccion = self.socket_servidor.accept()
             threading.Thread(target=self.manejar_conexion, args=(cliente_socket, direccion)).start()
+
 
 class ServidorArchivosAsync:
     def __init__(self, host='localhost', puerto=8080):
