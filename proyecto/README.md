@@ -23,6 +23,8 @@ proyecto/
 ├── requirements.txt       # Dependencias del proyecto
 ```
 
+
+
 ## 🔒 Configuración del Servidor
 
 1. Generar Certificados SSL
@@ -57,6 +59,9 @@ Si no los tienes, puedes generarlos con el siguiente comando:
     servidor-archivos
 
     ```
+
+
+
 ## 💻 Configuración del Cliente
 1. Navegar al Directorio del Cliente
 
@@ -68,6 +73,9 @@ Si no los tienes, puedes generarlos con el siguiente comando:
     ```bash
    python cliente.py
     ```
+
+
+
 ## Uso
 
 ### 🔹 Servidor
@@ -99,6 +107,8 @@ GET ejemplo1.txt
 PUT ejemplo2.txt
  ```
 
+
+
 ## ⚠️ Notas Importantes
 
 1.Asegúrate de que el directorio archivos/ exista en el servidor para almacenar y acceder a los archivos.
@@ -106,10 +116,14 @@ PUT ejemplo2.txt
 3.El servidor y el cliente deben usar los mismos certificados y claves para conectarse de forma segura.
 4.El servidor utiliza SSL/TLS, por lo que el cliente debe estar configurado para conectarse a un servidor seguro.
 
+
+
 ## 🛠️ Dependencias
 Las dependencias necesarias están especificadas en requirements.txt. Puedes instalarlas con el siguiente comando:
 
     pip install -r requirements.txt
+
+
 
 ## 🚀 Orquestación con Docker Compose
 Si deseas usar Docker Compose para simplificar la ejecución del servidor y cliente, puedes hacerlo con:
