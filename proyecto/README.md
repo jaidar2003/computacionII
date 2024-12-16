@@ -29,10 +29,9 @@ proyecto/
 
 Antes de ejecutar el servidor, asegúrate de que el certificado SSL (certificado.pem) y la clave privada (clave.pem) estén presentes en el directorio servidor/.
 Si no los tienes, puedes generarlos con el siguiente comando:
-    
-    ```bash
+
     openssl req -x509 -newkey rsa:4096 -keyout servidor/clave.pem -out servidor/certificado.pem -days 365 -nodes
-    ```
+
 2. Navegar al Directorio del Servidor
 
     ```bash
@@ -109,13 +108,11 @@ PUT ejemplo2.txt
 
 ## 🛠️ Dependencias
 Las dependencias necesarias están especificadas en requirements.txt. Puedes instalarlas con el siguiente comando:
-    
-    ```bash
+
     pip install -r requirements.txt
-    ```
+
 ## 🚀 Orquestación con Docker Compose
 Si deseas usar Docker Compose para simplificar la ejecución del servidor y cliente, puedes hacerlo con:
         
-    ```bash
+
     docker-compose up
-    ```
