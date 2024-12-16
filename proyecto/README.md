@@ -95,13 +95,13 @@ Soporta los siguientes comandos:
 
 El cliente se conecta al servidor envía comandos para interactuar con él.
 
-    Ejemplo de descargar un archivo:
+Ejemplo de descargar un archivo:
         
 ```bash
 GET ejemplo1.txt
  ```
 
-    Ejemplo de subir un archivo:
+Ejemplo de subir un archivo:
         
 ```bash
 PUT ejemplo2.txt
