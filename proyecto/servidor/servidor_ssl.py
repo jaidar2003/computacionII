@@ -27,17 +27,21 @@ if not os.path.exists(DIRECTORIO_BASE):
 def manejar_cliente(conexion_ssl, direccion):
     try:
         logging.info(f"Conexión aceptada desde {direccion}")
-        conexion_ssl.sendall(b"Bienvenido al servidor. Autenticación requerida.\nUsuario: ")
+        #conexion_ssl.sendall(b"Bienvenido al servidor. Autenticación requerida.\nUsuario: ")
+        conexion_ssl.sendall("Bienvenido al servidor. Autenticación requerida.\nUsuario: ".encode('utf-8'))
         usuario = conexion_ssl.recv(1024).decode().strip()
-        conexion_ssl.sendall(b"Contraseña: ")
+        #conexion_ssl.sendall(b"Contraseña: ")
+        conexion_ssl.sendall("Contraseña: ".encode('utf-8'))
         password = conexion_ssl.recv(1024).decode().strip()
 
         # Verificar credenciales
         if usuario in USUARIOS and USUARIOS[usuario] == hashlib.sha256(password.encode()).hexdigest():
-            conexion_ssl.sendall(b"Autenticación exitosa!\n")
+            #conexion_ssl.sendall(b"Autenticación exitosa!\n")
+            conexion_ssl.sendall("Autenticación exitosa!\n".encode('utf-8'))
             logging.info(f"Usuario autenticado: {usuario}")
         else:
-            conexion_ssl.sendall(b"Credenciales inválidas. Desconectando.\n")
+            #conexion_ssl.sendall(b"Credenciales inválidas. Desconectando.\n")
+            conexion_ssl.sendall("Credenciales inválidas. Desconectando.\n".encode('utf-8'))
             logging.warning(f"Intento fallido de autenticación desde {direccion}")
             conexion_ssl.close()
             return
