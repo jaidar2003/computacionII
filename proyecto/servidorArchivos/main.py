@@ -1,5 +1,11 @@
 from comandos import manejar_comando
 from seguridad import autenticar_usuario, crear_contexto_ssl
+from ..dataBase import db
+
+def crear_tablas():
+    insertar_usuario("", "admin123", "lectura,escritura")
+
+
 
 def manejar_cliente(conexion_ssl, direccion):
     try:

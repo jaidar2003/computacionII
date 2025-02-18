@@ -1,21 +1,29 @@
 import os
+from ..dataBase import db
 
-
-def manejar_comando(comando, directorio_base):
+def manejar_comando(comando, directorio_base, usuario_id):
     partes = comando.split()
     accion = partes[0].upper()
 
     if accion == "LISTAR":
-        return listar_archivos(directorio_base)
+        respuesta = listar_archivos(directorio_base)
+        registrar_log(usuario_id, "LISTAR")
+        return respuesta
 
     elif accion == "CREAR" and len(partes) == 2:
-        return crear_archivo(directorio_base, partes[1])
+        respuesta = crear_archivo(directorio_base, partes[1])
+        registrar_log(usuario_id, "CREAR", partes[1])
+        return respuesta
 
     elif accion == "ELIMINAR" and len(partes) == 2:
-        return eliminar_archivo(directorio_base, partes[1])
+        respuesta = eliminar_archivo(directorio_base, partes[1])
+        registrar_log(usuario_id, "ELIMINAR", partes[1])
+        return respuesta
 
     elif accion == "RENOMBRAR" and len(partes) == 3:
-        return renombrar_archivo(directorio_base, partes[1], partes[2])
+        respuesta = renombrar_archivo(directorio_base, partes[1], partes[2])
+        registrar_log(usuario_id, "RENOMBRAR", partes[1])
+        return respuesta
 
     else:
         return "Comando no reconocido o argumentos inválidos."

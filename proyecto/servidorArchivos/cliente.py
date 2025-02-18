@@ -14,8 +14,26 @@ def iniciar_cliente():
             print(conexion_ssl.recv(1024).decode(), end="")
 
             while True:
+                usuario = input("Usuario (o 'REGISTRAR usuario contraseña' para crear una cuenta): ")
+                conexion_ssl.sendall(usuario.encode())
+
+                if usuario.upper().startswith("REGISTRAR"):
+                    respuesta = conexion_ssl.recv(1024).decode()
+                    print(respuesta)
+                    continue  # Permite que el usuario se registre y luego vuelva a intentarlo
+
+                password = input("Contraseña: ")
+                conexion_ssl.sendall(password.encode())
+
+                respuesta = conexion_ssl.recv(1024).decode()
+                print(respuesta)
+
+                if "Autenticación exitosa" in respuesta:
+                    break  # Sale del bucle y pasa a enviar comandos
+
+            while True:
                 comando = input("> ")
-                if comando.lower() == 'salir':
+                if comando.lower() == "salir":
                     print("Desconectando...")
                     conexion_ssl.sendall(b"SALIR")
                     break
