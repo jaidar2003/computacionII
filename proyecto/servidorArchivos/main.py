@@ -1,13 +1,13 @@
 import sys
 import os
+import logging
+from servidor import iniciar_servidor
+from comandos import manejar_comando
+from seguridad import autenticar_usuario_en_servidor
+from baseDatos.db import insertar_usuario  # ✅ Agregada esta importación
 
 # Asegurar que 'proyecto/' esté en sys.path para que Python encuentre 'servidorArchivos'
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
-
-import logging
-from servidorArchivos.comandos import manejar_comando
-from servidorArchivos.seguridad import autenticar_usuario_en_servidor
-from servidorArchivos.baseDatos.db import insertar_usuario  # ✅ Agregada esta importación
 
 # Inicializar logging
 logging.basicConfig(level=logging.INFO, format="%(asctime)s - %(levelname)s - %(message)s")
@@ -46,3 +46,7 @@ def manejar_cliente(conexion_ssl, direccion):
     finally:
         conexion_ssl.close()
         logging.info(f"Conexión cerrada con {direccion}")
+
+if __name__ == "__main__":
+    print("Iniciando servidor...")
+    iniciar_servidor()  # Asegúrate de que esta función existe y mantiene el servidor activo
