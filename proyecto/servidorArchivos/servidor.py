@@ -52,8 +52,8 @@ def manejar_cliente(conexion_ssl, direccion):
 
 def iniciar_servidor():
     contexto = ssl.create_default_context(ssl.Purpose.CLIENT_AUTH)
-    cert_path = "ruta/a/certificado.pem"
-    key_path = "ruta/a/llave.pem"
+    cert_path = "certificados/certificado.pem"
+    key_path = "certificados/llave.pem"
     contexto.load_cert_chain(certfile=cert_path, keyfile=key_path)
 
     with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as servidor:
