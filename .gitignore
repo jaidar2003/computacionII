@@ -159,9 +159,4 @@ cython_debug/
 #  option (not recommended) you can uncomment the following to ignore the entire idea folder.
 #.idea/
 
-llave.pem
-clave.pem
-proyecto/servidor/certificado.pem
-server.log
-proyecto/servidor/llave.pem
-info.txt
+proyecto/certificados
