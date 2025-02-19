@@ -2,9 +2,12 @@ import os
 import sqlite3
 from hashlib import sha256
 
-# Definir la ruta de la base de datos dentro de la carpeta 'db'
-DB_PATH = os.path.join(os.path.dirname(__file__), 'db', 'servidor_archivos.db')
+BASE_DIR = os.path.dirname(os.path.dirname(__file__))  # Subimos un nivel
+DB_PATH = os.path.join(BASE_DIR, 'baseDatos', 'servidor_archivos.db')
 
+# Asegurarse de que la carpeta 'baseDatos' exista
+if not os.path.exists(os.path.dirname(DB_PATH)):
+    os.makedirs(os.path.dirname(DB_PATH))
 
 def crear_tablas():
     """Crea las tablas necesarias si no existen."""
@@ -29,6 +32,7 @@ def crear_tablas():
         )
         """)
         conn.commit()
+
 
 
 def registrar_usuario(username, password, permisos="lectura"):
@@ -136,7 +140,3 @@ def listar_usuarios():
         print("No hay usuarios en la base de datos.")
 
 
-# Asegurarse de que la carpeta 'db' exista
-db_dir = os.path.join(os.path.dirname(__file__), 'db')
-if not os.path.exists(db_dir):
-    os.makedirs(db_dir)

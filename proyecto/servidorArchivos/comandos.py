@@ -1,5 +1,6 @@
 import os
-from baseDatos.db import registrar_log
+from servidorArchivos.baseDatos import registrar_log
+
 
 def manejar_comando(comando, directorio_base, usuario_id):
     partes = comando.split()
