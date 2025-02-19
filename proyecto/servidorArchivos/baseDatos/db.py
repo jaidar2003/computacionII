@@ -139,4 +139,11 @@ def listar_usuarios():
     else:
         print("No hay usuarios en la base de datos.")
 
+if __name__ == "__main__":
+    print("📂 Creando tablas si no existen...")
+    crear_tablas()
+
+    print("\n👥 Usuarios registrados en la base de datos:")
+    listar_usuarios()
+
 
