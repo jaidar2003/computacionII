@@ -30,18 +30,27 @@ def iniciar_cliente():
 
                     opcion = input("\n👉 Selecciona una opción (1/2/3): ").strip()
 
-                    if opcion == "1":
+                    if opcion == "1":  # Iniciar sesión
                         usuario = input("\n👤 Usuario: ").strip()
-                        conexion_ssl.sendall(f"{usuario}\n".encode())  # Asegurar formato correcto
+                        conexion_ssl.sendall(f"{usuario}\n".encode())
 
                         password = input("🔒 Contraseña: ").strip()
-                        conexion_ssl.sendall(f"{password}\n".encode())  # Asegurar formato correcto
+                        conexion_ssl.sendall(f"{password}\n".encode())
 
+                        # Recibir respuesta del servidor
                         respuesta = conexion_ssl.recv(1024).decode().strip()
-                        print(f"\n📝 {respuesta}")
 
-                        if "Autenticación exitosa" in respuesta:
+                        if "Credenciales inválidas" in respuesta:
+                            print(f"\n❌ {respuesta}")
+                            continue  # Volver a pedir usuario y contraseña
+
+                        elif "Autenticación exitosa" in respuesta:
+                            print(f"\n✅ {respuesta}")
                             break  # Sale del bucle y pasa a enviar comandos
+
+                        else:
+                            print("\n⚠ Respuesta inesperada del servidor.")
+                            return  # Salir del cliente
 
                     elif opcion == "2":
                         nuevo_usuario = input("\n👤 Nuevo usuario: ").strip()
@@ -51,9 +60,10 @@ def iniciar_cliente():
                         conexion_ssl.sendall(comando_registro.encode())
 
                         respuesta = conexion_ssl.recv(1024).decode().strip()
-                        print(f"\n✅ {respuesta}")
+                        print(f"\n{respuesta}")  # ✅ Ahora imprime la respuesta clara del servidor
 
-                    elif opcion == "3":
+
+                    elif opcion == "3":  # Salir del cliente
                         print("\n👋 Saliendo del cliente...")
                         return
 
