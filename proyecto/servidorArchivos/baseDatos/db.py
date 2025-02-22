@@ -41,33 +41,6 @@ def crear_tablas():
 
 
 def insertar_usuario(username, password, permisos="lectura"):
-    """Inserta un nuevo usuario en la base de datos, si no existe."""
-    password_hash = sha256(password.encode()).hexdigest()
-
-    try:
-        with sqlite3.connect(DB_PATH) as conn:
-            cursor = conn.cursor()
-
-            # Verificar si el usuario ya existe
-            cursor.execute("SELECT id FROM usuarios WHERE username = ?", (username,))
-            if cursor.fetchone():
-                print(f"⚠ El usuario '{username}' ya existe.")
-                return False
-
-            # Insertar usuario
-            cursor.execute("""
-            INSERT INTO usuarios (username, password, permisos)
-            VALUES (?, ?, ?)
-            """, (username, password_hash, permisos))
-            conn.commit()
-            print(f"✅ Usuario '{username}' creado correctamente con permisos: {permisos}")
-            return True
-    except sqlite3.Error as e:
-        print(f"❌ Error al insertar usuario: {e}")
-        return False
-
-
-def registrar_usuario(username, password, permisos="lectura"):
     """Registra un nuevo usuario con permisos predeterminados."""
     password_hash = sha256(password.encode()).hexdigest()
 
