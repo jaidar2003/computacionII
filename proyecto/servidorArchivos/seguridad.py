@@ -1,5 +1,5 @@
 from hashlib import sha256
-from baseDatos.db import autenticar_usuario, registrar_usuario
+from base_datos.db import autenticar_usuario, registrar_usuario
 
 def autenticar_usuario_en_servidor(username, password):
     """Autentica un usuario usando la base de datos."""

@@ -1,15 +1,18 @@
 import sys
 import os
 import logging
-import ssl
 import socket
+import ssl
 import threading
-from servidor import iniciar_servidor, manejar_cliente
+from servidor import manejar_cliente, iniciar_servidor
 from comandos import manejar_comando
 from seguridad import autenticar_usuario_en_servidor
-from baseDatos.db import insertar_usuario
+from base_datos.db import registrar_usuario, crear_tablas
 
-# Asegurar que 'proyecto/' esté en sys.path para que Python encuentre 'servidorArchivos'
+sys.path.append(os.path.abspath(os.path.dirname(__file__)))
+
+
+# Agregar 'proyecto/' al sys.path para que Python encuentre 'servidorArchivos'
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
 
 # Inicializar logging
@@ -19,24 +22,21 @@ DIRECTORIO_BASE = "archivos_servidor"
 
 # Ruta de los certificados SSL
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
-CERT_PATH = os.path.join(BASE_DIR, "..", "certificados", "certificado.pem")
-KEY_PATH = os.path.join(BASE_DIR, "..", "certificados", "llave.pem")
+CERT_PATH = os.path.join(BASE_DIR, "certificados", "certificado.pem")
+KEY_PATH = os.path.join(BASE_DIR, "certificados", "llave.pem")
 
-
-def crear_tablas():
-    """Crea un usuario admin en la base de datos si no existe."""
-    insertar_usuario("admin", "admin123", "lectura,escritura")
-
+# Crear tablas al iniciar
+crear_tablas()
 
 def iniciar_servidor_ssl():
     """Inicializa el servidor con SSL."""
     contexto = ssl.create_default_context(ssl.Purpose.CLIENT_AUTH)
 
-    try:
-        contexto.load_cert_chain(certfile=CERT_PATH, keyfile=KEY_PATH)
-    except FileNotFoundError:
+    if not os.path.exists(CERT_PATH) or not os.path.exists(KEY_PATH):
         logging.error("❌ ERROR: No se encontraron los certificados SSL.")
         return
+
+    contexto.load_cert_chain(certfile=CERT_PATH, keyfile=KEY_PATH)
 
     with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as servidor:
         servidor.bind(('127.0.0.1', 5000))
@@ -48,7 +48,6 @@ def iniciar_servidor_ssl():
             conexion_ssl = contexto.wrap_socket(conexion, server_side=True)
             threading.Thread(target=manejar_cliente, args=(conexion_ssl, direccion)).start()
 
-
 if __name__ == "__main__":
     print("🌍 Iniciando Servidor de Archivos Seguro...\n")
-    iniciar_servidor_ssl()  # Servidor seguro con SSL
+    iniciar_servidor_ssl()

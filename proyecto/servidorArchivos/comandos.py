@@ -1,5 +1,5 @@
 import os
-from baseDatos.db import registrar_log
+from base_datos.db import registrar_log
 
 
 def manejar_comando(comando, directorio_base, usuario_id):
