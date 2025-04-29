@@ -3,8 +3,8 @@ import ssl
 import threading
 import logging
 import os
-from comandos import manejar_comando
-from seguridad import autenticar_usuario_en_servidor, registrar_usuario
+from proyecto.servidorArchivos.servidor.comandos import manejar_comando
+from proyecto.servidorArchivos.servidor.seguridad import autenticar_usuario_en_servidor, registrar_usuario
 
 HOST = '127.0.0.1'
 PORT = 5000

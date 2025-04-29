@@ -22,8 +22,8 @@ logger = logging.getLogger(__name__)
 sys.path.append(os.path.abspath(os.path.dirname(__file__)))
 
 # Importar módulos del servidor
-from servidorArchivos.base_datos.db import crear_tablas, registrar_usuario
-from servidorArchivos.servidor_async import iniciar_servidor_async
+from base_datos.db import crear_tablas, registrar_usuario
+from servidor_async import iniciar_servidor_async
 
 async def iniciar_servidor_async_wrapper(host='127.0.0.1', port=5556, directorio='test_archivos_async'):
     """Inicia el servidor asíncrono."""

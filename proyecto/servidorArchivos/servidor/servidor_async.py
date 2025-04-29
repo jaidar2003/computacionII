@@ -2,7 +2,6 @@ import asyncio
 import ssl
 import logging
 import os
-import json
 from base_datos.db import registrar_log, autenticar_usuario, registrar_usuario
 from hashlib import sha256
 
@@ -105,7 +104,7 @@ async def manejar_comando_async(comando, directorio_base, usuario_id):
     else:
         # Para comandos que usan Celery, redirigimos a la implementación síncrona
         # ya que Celery ya maneja la asincronía
-        from comandos import manejar_comando
+        from proyecto.servidorArchivos.servidor.comandos import manejar_comando
         return manejar_comando(comando, directorio_base, usuario_id)
 
 async def manejar_cliente_async(reader, writer, directorio_base=DIRECTORIO_BASE):

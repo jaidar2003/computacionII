@@ -1,31 +1,28 @@
 import sys
 import os
+
+# 🔧 Asegurar que el path raíz esté en sys.path antes de cualquier import personalizado
+sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
+
 import logging
 import socket
 import ssl
 import threading
-from servidor import manejar_cliente, iniciar_servidor
-from comandos import manejar_comando
-from seguridad import autenticar_usuario_en_servidor
-from base_datos.db import registrar_usuario, crear_tablas
+from servidor import manejar_cliente
+from base_datos.db import crear_tablas
 
-sys.path.append(os.path.abspath(os.path.dirname(__file__)))
-
-
-# Agregar 'proyecto/' al sys.path para que Python encuentre 'servidorArchivos'
-sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
-
-# Inicializar logging
+# 🎯 Configurar logging
 logging.basicConfig(level=logging.INFO, format="%(asctime)s - %(levelname)s - %(message)s")
 
+# 📂 Directorio de archivos
 DIRECTORIO_BASE = "archivos_servidor"
 
-# Ruta de los certificados SSL
+# 🔐 Rutas absolutas a certificados SSL
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
-CERT_PATH = os.path.join(BASE_DIR, "certificados", "certificado.pem")
-KEY_PATH = os.path.join(BASE_DIR, "certificados", "llave.pem")
+CERT_PATH = os.path.join(BASE_DIR, "..", "certificados", "certificado.pem")
+KEY_PATH = os.path.join(BASE_DIR, "..", "certificados", "llave.pem")
 
-# Crear tablas al iniciar
+# ⚙️ Crear tablas si no existen
 crear_tablas()
 
 def iniciar_servidor_ssl():
@@ -39,9 +36,9 @@ def iniciar_servidor_ssl():
     contexto.load_cert_chain(certfile=CERT_PATH, keyfile=KEY_PATH)
 
     with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as servidor:
-        servidor.bind(('127.0.0.1', 5000))
+        servidor.bind(('127.0.0.1', 5050))
         servidor.listen(5)
-        logging.info("✅ Servidor seguro iniciado en 127.0.0.1:5000")
+        logging.info("✅ Servidor seguro iniciado en 127.0.0.1:5050")
 
         while True:
             conexion, direccion = servidor.accept()
