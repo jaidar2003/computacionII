@@ -1,0 +1,12 @@
+# Core dependencies
+cryptography>=38.0.0     # For Fernet encryption/decryption
+celery>=5.2.0           # For asynchronous task processing
+redis>=4.3.0            # Redis client for Celery broker
+
+# Testing dependencies
+pytest>=7.0.0           # For automated testing
+
+# SSL is provided by Python's standard library
+# SQLite is provided by Python's standard library
+# Basic socket functionality is provided by Python's standard library
+# asyncio is provided by Python's standard library for async server

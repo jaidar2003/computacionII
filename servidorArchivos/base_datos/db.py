@@ -1,11 +1,10 @@
 import os
 import sqlite3
 from hashlib import sha256
-from base_datos.conexion import DB_PATH
-# Asegúrate de que la conexión está bien definida
 
-# Usar ruta relativa en vez de absoluta
-DB_PATH = os.path.join(os.path.dirname(__file__), "servidor_archivos.db")
+# Definir la ruta de la base de datos
+BASE_DIR = os.path.dirname(os.path.dirname(__file__))  # Subir un nivel
+DB_PATH = os.path.join(BASE_DIR, "base_datos", "servidor_archivos.db")
 
 # Asegurar que la carpeta exista
 if not os.path.exists(os.path.dirname(DB_PATH)):
@@ -69,13 +68,12 @@ def crear_tablas():
 
 def autenticar_usuario(username, password):
     """Autentica un usuario verificando su contraseña."""
-    password_hash = sha256(password.encode()).hexdigest()
     try:
         with sqlite3.connect(DB_PATH) as conn:
             cursor = conn.cursor()
             cursor.execute("""
             SELECT id, permisos FROM usuarios WHERE username = ? AND password = ?
-            """, (username, password_hash))
+            """, (username, password))
             return cursor.fetchone()
     except sqlite3.Error as e:
         print(f"❌ Error al autenticar usuario: {e}")
