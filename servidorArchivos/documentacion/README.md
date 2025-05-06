@@ -1,135 +1,161 @@
-# 🚀 Servidor de Archivos Concurrente con Acceso Remoto  
+# Servidor Seguro con Manejo de Archivos
 
-## 📌 Descripción  
-Este proyecto implementa un *servidor de archivos* que permite a múltiples clientes conectarse y gestionar archivos de manera concurrente. Utiliza *sockets* para la comunicación y mecanismos de *IPC* (Inter-Process Communication) para sincronizar el acceso a los archivos. Además, emplea *asincronismo de I/O* para mejorar el rendimiento en la transferencia de datos y *cola de tareas distribuidas* para operaciones pesadas.
+## 📌 Introducción
 
-## 🏗️ Arquitectura del Proyecto  
-
-El proyecto se divide en *dos componentes principales*:  
-
-1. *🖥️ Servidor de Archivos*:  
-   - Gestiona el acceso y las operaciones sobre los archivos.  
-   - Se comunica con múltiples clientes de forma concurrente.  
-   - Implementa mecanismos de autenticación y sincronización.  
-   - Ofrece versiones síncronas y asíncronas para optimizar el rendimiento.
-
-2. *📡 Cliente de Archivos*:  
-   - Se conecta al servidor y ejecuta comandos de gestión de archivos.  
-   - Permite a los usuarios listar, crear, eliminar y renombrar archivos.  
-   - Soporta operaciones avanzadas como compresión y cifrado asíncrono.
+Este proyecto implementa un **servidor seguro** para la gestión remota de archivos, utilizando **SSL/TLS** para cifrar la comunicación y autenticación de usuarios. Además, incluye un sistema de verificación de archivos con **Celery** para asegurar que no estén corruptos ni contengan virus, y un **sistema de registro de actividades (logging)** para auditar acciones del servidor, tanto en archivo como en base de datos.
 
 ---
 
-## ⚙️ Funcionalidades  
+## 🚀 Características Principales
 
-### 📂 *Servidor*  
-✔ Gestión de archivos: permite *crear, eliminar, renombrar y listar archivos*.  
-✔ Acceso concurrente: maneja múltiples clientes simultáneamente.  
-✔ Comunicación con clientes a través de *sockets*.  
-✔ Seguridad: autenticación de usuarios para el acceso a archivos.  
-✔ Procesamiento asíncrono: operaciones pesadas ejecutadas en segundo plano.
-✔ Cola de tareas distribuidas: gestión eficiente de operaciones mediante Celery.
-✔ Versión asíncrona: implementación con asyncio para mejor rendimiento.
-
-### 🔌 *Cliente*  
-✔ Conexión segura al servidor utilizando *sockets SSL*.  
-✔ Ejecución de comandos remotos para *gestionar archivos*.  
-✔ Interfaz de línea de comandos intuitiva.  
-✔ Configuración mediante argumentos de línea de comandos.
+✔️ **Conexiones seguras** mediante **SSL/TLS**.
+✔️ **Manejo de múltiples clientes simultáneos** usando **hilos (threading)**.
+✔️ **Autenticación de usuarios** antes de permitir operaciones.
+✔️ **Comandos básicos para gestión de archivos** en el servidor.
+✔️ **Verificación asíncrona de archivos** con Celery.
+✔️ **Registro de actividad con logging en archivo y base de datos**.
+✔️ **Estructura modular** para facilitar mantenimiento y escalabilidad.
 
 ---
 
-## 🛠️ *Mecanismos de IPC y Concurrencia*  
+## 🔧 Instalación y Configuración
 
-El proyecto implementa diversas herramientas para garantizar un acceso seguro y eficiente a los archivos:  
+### 1️⃣ **Clonar el repositorio**
 
-### 🔄 *Inter-Process Communication (IPC)*  
-🔹 *Sockets*: Comunicación entre el servidor y los clientes.  
-🔹 *Asincronismo de I/O*: Optimización en la lectura y escritura de archivos con asyncio y aiofiles.  
-🔹 *Cola de tareas*: Comunicación asíncrona mediante Celery y Redis.
+```bash
+ git clone https://github.com/jaidar2003/computacionII.git
+ cd computacionII/proyecto/servidorArchivos
+```
 
-### ⚡ *Sincronización y Concurrencia*  
-🔹 *Threads*: Manejo de múltiples clientes en paralelo.  
-🔹 *Locks*: Protección del acceso simultáneo a archivos.  
-🔹 *Asyncio*: Manejo eficiente de operaciones de I/O sin bloqueo.
-🔹 *Celery Workers*: Procesamiento distribuido de tareas pesadas.
+### 2️⃣ **Instalar dependencias**
 
----
-
-## 📂 *Almacenamiento de Datos*  
-
-📌 Los archivos se almacenan en el sistema de archivos local del servidor, organizados en un directorio específico.  
-📌 Los datos de usuarios y logs se almacenan en una base de datos SQLite.
-
----
-
-## 🎨 *Interfaz del Cliente*  
-
-💻 El cliente utiliza una *interfaz de línea de comandos (CLI)* para enviar comandos al servidor y recibir respuestas en tiempo real.  
-💻 Soporta argumentos de línea de comandos para configuración flexible.
-
----
-
-## 🔑 *Principales Características*  
-
-✅ *Servidor de archivos*: Almacena y gestiona archivos en un directorio local.  
-✅ *Conexión segura*: Comunicación cifrada entre clientes y servidor.  
-✅ *Acceso concurrente*: Soporte para múltiples clientes conectados simultáneamente.  
-✅ *Gestión de archivos: Operaciones básicas como **crear, eliminar, renombrar y listar archivos*.
-✅ *Operaciones avanzadas*: Compresión y cifrado de archivos de forma asíncrona.
-✅ *Procesamiento asíncrono*: Tareas pesadas ejecutadas en segundo plano.
-✅ *Configuración flexible*: Mediante argumentos de línea de comandos.
-
----
-
-## 📋 *Comandos Disponibles*
-
-### Comandos Básicos
-- LISTAR: Muestra los archivos disponibles en el servidor
-- CREAR <nombre>: Crea un nuevo archivo vacío
-- ELIMINAR <nombre>: Elimina un archivo existente
-- RENOMBRAR <viejo> <nuevo>: Cambia el nombre de un archivo
-
-### Comandos Avanzados
-- COMPRIMIR <nombre>: Comprime un archivo en formato ZIP (asíncrono)
-- CIFRAR <nombre> <clave>: Cifra un archivo con la clave proporcionada (asíncrono)
-- ESTADO <id_tarea>: Verifica el estado de una tarea asíncrona
-
----
-
-## 🚀 *Instalación y Uso*
-
-### Requisitos
-Instala las dependencias necesarias:
-bash
+```bash
 pip install -r requirements.txt
+```
 
+### 3️⃣ **Generar Certificados SSL**
 
-### Iniciar el Servidor
-bash
-# Modo normal
-python main.py -p 5000 -H 127.0.0.1 -d archivos_servidor
+```bash
+mkdir certificados
+openssl req -x509 -newkey rsa:4096 -keyout certificados/llave.pem -out certificados/certificado.pem -days 365 -nodes
+```
 
-# Modo asíncrono
-python main.py -p 5000 -H 127.0.0.1 -d archivos_servidor -a
+### 4️⃣ **Ejecutar el Servidor**
 
-# Modo verbose (logs detallados)
-python main.py -v
+```bash
+python servidor.py
+```
 
+### 5️⃣ **Ejecutar el Cliente**
 
-### Iniciar el Cliente
-bash
-# Conexión básica
-python cliente.py -s 127.0.0.1 -p 5000
+```bash
+python cliente.py
+```
 
-# Con usuario predefinido
-python cliente.py -s 127.0.0.1 -p 5000 -u usuario1
+### 6️⃣ **Ejecutar el Worker de Celery**
 
-# Modo verbose
-python cliente.py -v
+```bash
+celery -A servidor.tareas worker --loglevel=info
+```
 
+---
 
-### Iniciar Workers de Celery
-bash
-# Desde el directorio del proyecto
-celery -A tareas.celery_app worker --loglevel=info
+## 🔄 Flujo del Sistema
+
+```
+┌───────────────────┐      SSL/TLS      ┌───────────────────┐
+│     Cliente       │  ◀──────────────▶ │     Servidor      │
+│  (cliente.py)     │                   │  (servidor.py)    │
+└───────────────────┘                   └───────────────────┘
+                                                 │
+                                                 ▼
+                                      ┌────────────────────────┐
+                                      │  Sistema de Archivos   │
+                                      │  (archivos_servidor/)  │
+                                      └────────────────────────┘
+                                                 │
+                                                 ▼
+                                      ┌────────────────────────┐
+                                      │ Verificación Celery    │
+                                      │ (integridad y virus)   │
+                                      └────────────────────────┘
+                                                 │
+                                                 ▼
+                                      ┌────────────────────────┐
+                                      │ Registro de Actividad  │
+                                      │   (archivo + BD)       │
+                                      └────────────────────────┘
+```
+
+---
+
+## 📜 Comandos Disponibles
+
+| Comando                   | Descripción                                       |
+| ------------------------- | ------------------------------------------------- |
+| `LISTAR`                  | Muestra los archivos en el servidor.              |
+| `CREAR nombre`            | Crea un archivo vacío con el nombre especificado. |
+| `ELIMINAR nombre`         | Elimina un archivo del servidor.                  |
+| `RENOMBRAR antiguo nuevo` | Cambia el nombre de un archivo.                   |
+| `SALIR`                   | Cierra la conexión con el servidor.               |
+
+---
+
+## 🔒 Seguridad Implementada
+
+✔️ **Autenticación de usuarios**: Verificación con credenciales antes de ejecutar comandos.
+✔️ **SSL/TLS**: Toda la comunicación entre cliente y servidor está cifrada.
+✔️ **Verificación de archivos con Celery**: integridad (hash) + escaneo antivirus (ClamAV).
+✔️ **Logging de eventos**: Se registra en archivo `.log` y en tabla `log_eventos`.
+✔️ **Aislamiento de usuarios**: Cada cliente tiene su propio contexto de ejecución.
+
+---
+
+## 📂 Estructura del Proyecto
+
+```
+servidorArchivos/
+├── cliente.py       # Cliente que se conecta al servidor
+├── servidor.py      # Servidor que maneja clientes y comandos
+├── comandos.py      # Funciones para gestionar archivos
+├── seguridad.py     # Módulo de autenticación y configuración SSL
+├── tareas.py        # Tareas Celery (escaneo antivirus e integridad)
+├── main.py          # Punto de entrada principal del servidor
+├── proyecto.txt     # Documentación del proyecto
+├── celeryconfig.py  # Configuración de Celery
+├── worker.py        # Inicializador del worker Celery
+├── servidor.log     # Archivo de log para registrar actividad
+├── base_datos/
+│   ├── db.py        # Lógica de usuarios y logging (BD)
+│   └── servidor_archivos.db
+└── certificados/    # Archivos SSL (cert.pem, key.pem)
+```
+
+---
+
+## 🚀 Mejoras Futuras
+
+* [ ] Implementar una **interfaz gráfica (GUI)** para el cliente.
+* [ ] Soporte para **subida y descarga de archivos**.
+* [ ] Integrar logging Celery en la misma base.
+* [ ] Alertas automáticas si un archivo es infectado.
+* [ ] Logs exportables (CSV, JSON).
+
+---
+
+## 🏗️ Contribuciones
+
+Haz un fork del repositorio, crea una rama con tus cambios y envía un pull request.
+
+```bash
+git checkout -b mi-mejora
+# Realiza tus cambios
+git commit -m "feat: Agregar nueva funcionalidad X"
+git push origin mi-mejora
+```
+
+---
+
+## 📝 Licencia
+
+Este proyecto está bajo la licencia **MIT**. Puedes usarlo y modificarlo libremente. 😊

@@ -88,10 +88,10 @@ python servidorArchivos/cliente.py -s 127.0.0.1 -p 5000
 Para ejecutar las pruebas automatizadas:
 
 ```bash
-# Pruebas del servidor normal
+# Pruebas del server normal
 python test_server.py
 
-# Pruebas del servidor asíncrono
+# Pruebas del server asíncrono
 python test_async_server.py
 ```
 
