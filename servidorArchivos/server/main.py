@@ -5,7 +5,6 @@ import logging
 import socket
 import ssl
 import threading
-import multiprocessing
 import warnings
 import subprocess
 from dotenv import load_dotenv
@@ -17,7 +16,7 @@ sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
 
 from servidor import manejar_cliente
 from base_datos.db import crear_tablas
-from cliente import *
+from cliente import iniciar_cliente
 
 # 📦 Cargar variables de entorno
 load_dotenv()
@@ -68,8 +67,9 @@ def iniciar_servidor_ssl(host='0.0.0.0', port=5050, directorio='archivos_servido
 
 def iniciar_worker_celery():
     root_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), '..'))
-    comando = ["/Users/juanmaaidar/Library/Python/3.9/bin/celery", "-A", "tareas.celery", "worker", "--loglevel=info"]
-    return subprocess.Popen(comando, cwd=root_dir)
+    comando = ["/Users/juanmaaidar/Library/Python/3.9/bin/celery", "-A", "tareas.celery", "worker", "--loglevel=warning"]
+    with open(os.devnull, 'w') as devnull:
+        return subprocess.Popen(comando, cwd=root_dir, stdout=devnull, stderr=subprocess.STDOUT)
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description='Cliente/Servidor de Archivos Seguro')
@@ -90,12 +90,13 @@ if __name__ == "__main__":
         logging.getLogger().setLevel(logging.DEBUG)
 
     if args.modo == 'server':
-        print(f"🌍 Iniciando Servidor de Archivos Seguro en {args.host}:{args.port}...")
+        print(f"🌍 Iniciando Servidor de Archivos Seguro en {args.host}:{args.port}")
         worker_process = iniciar_worker_celery()
+        print("🚀 Celery está corriendo en segundo plano")
         try:
             iniciar_servidor_ssl(args.host, args.port, args.directorio)
         except KeyboardInterrupt:
-            print("\n🛑 Apagando servidor y worker Celery...")
+            print("\n🛑 Apagando servidor y worker Celery")
             worker_process.terminate()
     else:
         cliente_host = '127.0.0.1' if args.host == '0.0.0.0' else args.host
