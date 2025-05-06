@@ -65,11 +65,19 @@ def iniciar_servidor_ssl(host='0.0.0.0', port=5050, directorio='archivos_servido
     except Exception as e:
         logging.error(f"❌ Error al iniciar el server: {e}")
 
+
 def iniciar_worker_celery():
     root_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), '..'))
-    comando = ["/Users/juanmaaidar/Library/Python/3.9/bin/celery", "-A", "tareas.celery", "worker", "--loglevel=warning"]
-    with open(os.devnull, 'w') as devnull:
-        return subprocess.Popen(comando, cwd=root_dir, stdout=devnull, stderr=subprocess.STDOUT)
+    # Change loglevel to critical to suppress most messages
+    comando = ["/Users/juanmaaidar/Library/Python/3.9/bin/celery", "-A", "tareas.celery", "worker", "--loglevel=critical", "--quiet"]
+
+    # Start the process with output redirected
+    process = subprocess.Popen(comando, cwd=root_dir, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+
+    # Print your own simple message
+    print("✅ Worker Celery iniciado correctamente.")
+
+    return process
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description='Cliente/Servidor de Archivos Seguro')
@@ -90,13 +98,12 @@ if __name__ == "__main__":
         logging.getLogger().setLevel(logging.DEBUG)
 
     if args.modo == 'server':
-        print(f"🌍 Iniciando Servidor de Archivos Seguro en {args.host}:{args.port}")
+        print(f"🌍 Iniciando Servidor de Archivos Seguro en {args.host}:{args.port}...")
         worker_process = iniciar_worker_celery()
-        print("🚀 Celery está corriendo en segundo plano")
         try:
             iniciar_servidor_ssl(args.host, args.port, args.directorio)
         except KeyboardInterrupt:
-            print("\n🛑 Apagando servidor y worker Celery")
+            print("\n🛑 Apagando servidor y worker Celery...")
             worker_process.terminate()
     else:
         cliente_host = '127.0.0.1' if args.host == '0.0.0.0' else args.host
