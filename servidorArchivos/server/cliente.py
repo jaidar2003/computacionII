@@ -4,12 +4,31 @@ import os
 import sys
 import logging
 import subprocess
+import hashlib
 
 # 🔧 Asegurar que el path raíz esté en sys.path antes de cualquier import personalizado
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
 
 from server.comandos import manejar_comando
 from server.seguridad import autenticar_usuario_en_servidor, registrar_usuario
+
+def calcular_hash_archivo(ruta_archivo):
+    """
+    Calcula el hash SHA-256 de un archivo.
+
+    Args:
+        ruta_archivo (str): Ruta al archivo
+
+    Returns:
+        str: Hash SHA-256 en formato hexadecimal o None si hay un error
+    """
+    try:
+        with open(ruta_archivo, 'rb') as f:
+            contenido = f.read()
+            return hashlib.sha256(contenido).hexdigest()
+    except Exception as e:
+        print(f"❌ Error al calcular hash: {e}")
+        return None
 
 DIRECTORIO_BASE = "servidorArchivos"
 
@@ -125,6 +144,37 @@ def iniciar_cliente(host, port):
 
                     # Enviar comando
                     comando = input()
+
+                    # Manejar comando CREAR especialmente para calcular y enviar hash
+                    if comando.upper().startswith("CREAR "):
+                        partes = comando.split()
+                        if len(partes) == 2:
+                            # Solicitar ruta del archivo local
+                            print("📂 Ruta del archivo local: ")
+                            archivo_local = input()
+
+                            if os.path.exists(archivo_local):
+                                # Calcular hash del archivo
+                                hash_archivo = calcular_hash_archivo(archivo_local)
+
+                                if hash_archivo:
+                                    # Modificar comando para incluir el hash
+                                    comando = f"{partes[0]} {partes[1]} {hash_archivo}"
+                                    print(f"📤 Enviando comando con hash: {comando}")
+
+                                    # Leer contenido del archivo para enviarlo al servidor
+                                    try:
+                                        with open(archivo_local, 'r') as f:
+                                            contenido = f.read()
+                                            # Aquí se podría implementar la transferencia del contenido
+                                            # Por ahora solo enviamos el comando con el hash
+                                    except Exception as e:
+                                        print(f"❌ Error al leer archivo: {e}")
+                                else:
+                                    print("❌ No se pudo calcular el hash del archivo.")
+                            else:
+                                print(f"❌ El archivo local '{archivo_local}' no existe.")
+
                     conexion_ssl.sendall(f"{comando}\n".encode('utf-8'))
 
                     if comando.upper() == "SALIR":

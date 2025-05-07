@@ -3,9 +3,24 @@ import ssl
 import threading
 import logging
 import os
+import sys
 from dotenv import load_dotenv
-from comandos import *
-from seguridad import autenticar_usuario_en_servidor, registrar_usuario
+
+# 🔧 Asegurar que el path raíz esté en sys.path antes de cualquier import personalizado
+sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
+
+# Intentar importar como parte del paquete primero (para tests y cuando se importa)
+# Si falla, importar localmente (para ejecución directa)
+try:
+    # Importar como parte del paquete
+    from server.comandos import *
+    from server.seguridad import autenticar_usuario_en_servidor, registrar_usuario
+except ImportError:
+    # Importar localmente
+    from comandos import *
+    from seguridad import autenticar_usuario_en_servidor, registrar_usuario
+
+# Este import funciona en ambos casos
 from base_datos.db import log_evento
 
 load_dotenv()
@@ -118,6 +133,10 @@ def iniciar_servidor(host=HOST, port=PORT, directorio=DIRECTORIO_BASE):
 
 if __name__ == "__main__":
     import argparse
+
+    # Verificar que los módulos se importaron correctamente
+    print("✅ Módulo servidor.py cargado correctamente.")
+    print("✅ Importación de comandos, seguridad y base_datos.db exitosa.")
 
     parser = argparse.ArgumentParser(description='Servidor de Archivos Seguro')
     parser.add_argument('-H', '--host', type=str, default=HOST)

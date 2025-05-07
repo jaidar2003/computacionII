@@ -51,7 +51,7 @@ class TestComandos(unittest.TestCase):
 
     @patch('server.comandos.verificar_integridad_y_virus')
     def test_crear_archivo(self, mock_verificar):
-        """Test creating a file"""
+        """Test creating a file without hash"""
         # Mock the verificar_integridad_y_virus.delay function
         mock_verificar.delay.return_value = None
 
@@ -65,8 +65,28 @@ class TestComandos(unittest.TestCase):
         # Check that the file was created
         self.assertTrue(os.path.exists(os.path.join(self.directorio_base, nuevo_archivo)))
 
-        # Check that the verification was called
-        mock_verificar.delay.assert_called_once_with(os.path.join(self.directorio_base, nuevo_archivo))
+        # Check that the verification was called with None as the hash parameter
+        mock_verificar.delay.assert_called_once_with(os.path.join(self.directorio_base, nuevo_archivo), None)
+
+    @patch('server.comandos.verificar_integridad_y_virus')
+    def test_crear_archivo_con_hash(self, mock_verificar):
+        """Test creating a file with hash"""
+        # Mock the verificar_integridad_y_virus.delay function
+        mock_verificar.delay.return_value = None
+
+        # Call the function
+        nuevo_archivo = "nuevo_archivo_hash.txt"
+        hash_esperado = "1234567890abcdef1234567890abcdef1234567890abcdef1234567890abcdef"
+        result = crear_archivo(self.directorio_base, nuevo_archivo, hash_esperado)
+
+        # Check the result
+        self.assertEqual(result, f"✅ Archivo '{nuevo_archivo}' creado y enviado para verificación con hash.")
+
+        # Check that the file was created
+        self.assertTrue(os.path.exists(os.path.join(self.directorio_base, nuevo_archivo)))
+
+        # Check that the verification was called with the hash
+        mock_verificar.delay.assert_called_once_with(os.path.join(self.directorio_base, nuevo_archivo), hash_esperado)
 
     def test_crear_archivo_existente(self):
         """Test creating a file that already exists"""
