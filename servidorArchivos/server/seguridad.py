@@ -1,4 +1,4 @@
-from hashlib import sha256
+import bcrypt
 from base_datos.db import autenticar_usuario, registrar_usuario as db_registrar_usuario
 
 def autenticar_usuario_en_servidor(username, password):
@@ -10,5 +10,4 @@ def autenticar_usuario_en_servidor(username, password):
 
 def registrar_usuario(username, password, permisos="lectura"):
     """Registra un nuevo usuario en la base de datos."""
-    password_hash = sha256(password.encode()).hexdigest()
-    return db_registrar_usuario(username, password_hash, permisos)
+    return db_registrar_usuario(username, password, permisos)

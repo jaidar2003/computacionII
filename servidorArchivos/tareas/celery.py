@@ -5,25 +5,30 @@ from celery import Celery
 from dotenv import load_dotenv
 from base_datos.db import log_evento
 
+# 🧪 Carga las variables de entorno desde .env
 load_dotenv()
 
-BROKER_URL = os.getenv("CELERY_BROKER_URL", "redis://localhost:6379/0")
-BACKEND_URL = os.getenv("CELERY_BACKEND_URL", "redis://localhost:6379/0")
+# 📍 Configuración de la URL del broker y backend (Redis por defecto)
+BROKER_URL = os.getenv("CELERY_BROKER_URL", "redis://localhost:6379/0")  # Cola de tareas
+BACKEND_URL = os.getenv("CELERY_BACKEND_URL", "redis://localhost:6379/0")  # Resultado de tareas
 
+# 🚀 Inicializa la app Celery
 app = Celery(
     'verificador_archivos',
-    broker='redis://localhost:6379/0',   # Asegurate de tener Redis corriendo
-    backend='rpc://'
+    broker=BROKER_URL,  # Redis actúa como cola de mensajes
+    backend='rpc://'  # Para retornar resultados desde el worker
 )
 
 
 @app.task
 def verificar_integridad_y_virus(ruta_archivo, hash_esperado=None):
     """
-    Tarea Celery para verificar que un archivo no esté corrupto y no tenga virus.
-    - Comprueba el hash SHA-256 si se proporciona uno.
-    - Ejecuta clamscan para escanear el archivo.
-    También registra el resultado en la base de datos.
+    Esta tarea se ejecuta en segundo plano usando Celery y Redis como broker.
+
+    Funcionalidades:
+    1. Verifica la integridad del archivo calculando el hash SHA-256.
+    2. Ejecuta ClamAV (clamscan) para verificar si hay virus.
+    3. Registra los resultados en la base de datos.
     """
     resultado = {
         'ruta': ruta_archivo,
@@ -33,7 +38,7 @@ def verificar_integridad_y_virus(ruta_archivo, hash_esperado=None):
         'mensaje': ''
     }
 
-    # Verificar integridad (hash)
+    # ✅ Verificación de integridad (Hash SHA-256)
     if hash_esperado:
         try:
             with open(ruta_archivo, 'rb') as f:
@@ -49,7 +54,7 @@ def verificar_integridad_y_virus(ruta_archivo, hash_esperado=None):
             resultado['integridad'] = 'error'
             resultado['mensaje'] += f"Error al calcular hash: {e}. "
 
-    # Verificar virus con ClamAV
+    # 🦠 Verificación de virus usando ClamAV
     try:
         escaneo = subprocess.run(['clamscan', ruta_archivo], capture_output=True, text=True)
         salida = escaneo.stdout
@@ -66,11 +71,12 @@ def verificar_integridad_y_virus(ruta_archivo, hash_esperado=None):
         resultado['virus'] = 'error'
         resultado['mensaje'] += f"Error en escaneo: {e}. "
 
+    # 🏁 Si todo salió bien y no hubo errores
     if resultado['estado'] == 'desconocido':
         resultado['estado'] = 'ok'
         resultado['mensaje'] = 'Archivo verificado con éxito.'
 
-    # Guardar en log_eventos
+    # 📝 Registrar el evento en la base de datos (log_eventos)
     try:
         log_evento("celery", "localhost", "VERIFICACION", f"{resultado['estado'].upper()} - {resultado['mensaje']}")
     except Exception as e:

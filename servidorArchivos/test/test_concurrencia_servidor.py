@@ -4,7 +4,7 @@ import socket
 import ssl
 import time
 import os
-from servidor.servidor import iniciar_servidor
+from server.servidor import iniciar_servidor
 
 class TestConcurrenciaServidor(unittest.TestCase):
 

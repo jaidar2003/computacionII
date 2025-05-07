@@ -161,6 +161,7 @@ cython_debug/
 
 certificados/
 *.pem
+notas.md
 
 tps/
 tp1/

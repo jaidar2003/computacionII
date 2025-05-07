@@ -1,10 +1,15 @@
 import socket
 import ssl
 import os
+import sys
 import logging
 import subprocess
-from comandos import manejar_comando
-from seguridad import autenticar_usuario_en_servidor, registrar_usuario
+
+# 🔧 Asegurar que el path raíz esté en sys.path antes de cualquier import personalizado
+sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
+
+from server.comandos import manejar_comando
+from server.seguridad import autenticar_usuario_en_servidor, registrar_usuario
 
 DIRECTORIO_BASE = "servidorArchivos"
 
@@ -34,6 +39,10 @@ def iniciar_cliente(host, port):
                     opciones = conexion_ssl.recv(1024).decode('utf-8')
                     print(opciones)
 
+                    # Mostrar menú de opciones en caso de que no se reciba del servidor o no contenga las opciones
+                    if not opciones.strip() or "Opciones:" not in opciones:
+                        print("\n🔹 Opciones:\n   [1] Iniciar sesión\n   [2] Registrarse\n   [3] Salir\n\n👉 Selecciona una opción (1/2/3): ")
+
                     # Enviar opción seleccionada
                     opcion = input()
                     conexion_ssl.sendall(f"{opcion}\n".encode('utf-8'))
@@ -60,35 +69,48 @@ def iniciar_cliente(host, port):
                         print(respuesta_auth)
 
                         if "✅ Autenticación exitosa" in respuesta_auth:
+                            print("\n💻 Modo de comandos activado. Escribe 'SALIR' para desconectar.")
                             break  # Continuar al modo de comandos
 
                     elif opcion == '2':  # Registrarse
-                        # Recibir solicitud de nuevo usuario
-                        solicitud_nuevo_usuario = conexion_ssl.recv(1024).decode('utf-8')
-                        print(solicitud_nuevo_usuario)
-
-                        # Enviar nuevo usuario
+                        print("\n👤 Nuevo usuario: ")
                         nuevo_usuario = input()
-                        conexion_ssl.sendall(f"{nuevo_usuario}\n".encode('utf-8'))
-
-                        # Recibir solicitud de nueva contraseña
-                        solicitud_nueva_password = conexion_ssl.recv(1024).decode('utf-8')
-                        print(solicitud_nueva_password)
-
-                        # Enviar nueva contraseña
+                        print("🔒 Nueva contraseña: ")
                         nueva_password = input()
-                        conexion_ssl.sendall(f"{nueva_password}\n".encode('utf-8'))
+
+                        # Enviar comando de registro al servidor
+                        conexion_ssl.sendall(f"REGISTRAR {nuevo_usuario} {nueva_password}\n".encode('utf-8'))
 
                         # Recibir respuesta de registro
                         respuesta_registro = conexion_ssl.recv(1024).decode('utf-8')
                         print(respuesta_registro)
 
                         if "✅ Usuario registrado" in respuesta_registro:
-                            # Si el registro fue exitoso, el servidor podría autenticar automáticamente
+                            # Recibir mensaje adicional del servidor
+                            mensaje_adicional = conexion_ssl.recv(1024).decode('utf-8')
+                            print(mensaje_adicional)
+
+                            # Continuar con el flujo de inicio de sesión
+                            print("\n👤 Usuario: ")
+                            usuario = nuevo_usuario
+                            print(usuario)
+                            conexion_ssl.sendall(f"{usuario}\n".encode('utf-8'))
+
+                            # Recibir solicitud de contraseña
+                            solicitud_password = conexion_ssl.recv(1024).decode('utf-8')
+                            print(solicitud_password)
+
+                            # Enviar contraseña
+                            password = nueva_password
+                            print(password)
+                            conexion_ssl.sendall(f"{password}\n".encode('utf-8'))
+
+                            # Recibir respuesta de autenticación
                             respuesta_auth = conexion_ssl.recv(1024).decode('utf-8')
                             print(respuesta_auth)
 
-                            if "✅ Autenticación" in respuesta_auth:
+                            if "✅ Autenticación exitosa" in respuesta_auth:
+                                print("\n💻 Modo de comandos activado. Escribe 'SALIR' para desconectar.")
                                 break  # Continuar al modo de comandos
 
                     elif opcion == '3':  # Salir
@@ -188,3 +210,20 @@ def manejar_cliente(conexion_ssl, direccion, directorio=DIRECTORIO_BASE):
     finally:
         conexion_ssl.close()
         logging.info(f"🔌 Conexión cerrada con {direccion}")
+
+
+if __name__ == "__main__":
+    # Configurar logging
+    logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
+    logging.info("🌍 Iniciando cliente de archivos seguro...")
+
+    # Obtener host y puerto del servidor
+    host = 'localhost'
+    port = 5050
+
+    print("🌍 Cliente de Archivos Seguro")
+    print("============================")
+    print("Este cliente te permite conectarte a un servidor de archivos seguro.")
+    print("Podrás registrarte, iniciar sesión y gestionar archivos de forma segura.")
+    print(f"🌍 Conectando al Servidor de Archivos Seguro en {host}:{port}...")
+    iniciar_cliente(host, port)
