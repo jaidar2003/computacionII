@@ -53,25 +53,22 @@ def iniciar_cliente(host, port):
                 mensaje_bienvenida = conexion_ssl.recv(1024).decode('utf-8')
                 print(mensaje_bienvenida)
 
-                while True:
-                    # Recibir opciones del servidor
-                    opciones = conexion_ssl.recv(1024).decode('utf-8')
-                    print(opciones)
+                # Recibir solicitud de usuario
+                solicitud_usuario = conexion_ssl.recv(1024).decode('utf-8')
+                print(solicitud_usuario)
 
-                    # Mostrar menú de opciones en caso de que no se reciba del servidor o no contenga las opciones
-                    if not opciones.strip() or "Opciones:" not in opciones:
-                        print("\n🔹 Opciones:\n   [1] Iniciar sesión\n   [2] Registrarse\n   [3] Salir\n\n👉 Selecciona una opción (1/2/3): ")
+                # Bandera para controlar el flujo de autenticación
+                autenticado = False
 
-                    # Enviar opción seleccionada
+                # Bucle de autenticación
+                while not autenticado:
+                    # Mostrar menú de opciones localmente
+                    print("\n🔹 Opciones:\n   [1] Iniciar sesión\n   [2] Registrarse\n   [3] Salir\n 👉 Selecciona una opción (1/2/3): ")
                     opcion = input()
-                    conexion_ssl.sendall(f"{opcion}\n".encode('utf-8'))
 
                     if opcion == '1':  # Iniciar sesión
-                        # Recibir solicitud de usuario
-                        solicitud_usuario = conexion_ssl.recv(1024).decode('utf-8')
-                        print(solicitud_usuario)
-
-                        # Enviar usuario
+                        # Enviar nombre de usuario
+                        print("\n👤 Usuario: ")
                         usuario = input()
                         conexion_ssl.sendall(f"{usuario}\n".encode('utf-8'))
 
@@ -89,15 +86,22 @@ def iniciar_cliente(host, port):
 
                         if "✅ Autenticación exitosa" in respuesta_auth:
                             print("\n💻 Modo de comandos activado. Escribe 'SALIR' para desconectar.")
-                            break  # Continuar al modo de comandos
+                            autenticado = True
+                            break  # Salir del bucle de autenticación
+                        else:
+                            # Si la autenticación falló, volver a recibir la solicitud de usuario
+                            solicitud_usuario = conexion_ssl.recv(1024).decode('utf-8')
+                            print(solicitud_usuario)
+                            continue
 
                     elif opcion == '2':  # Registrarse
+                        # Solicitar datos para registro
                         print("\n👤 Nuevo usuario: ")
                         nuevo_usuario = input()
                         print("🔒 Nueva contraseña: ")
                         nueva_password = input()
 
-                        # Enviar comando de registro al servidor
+                        # Enviar comando de registro
                         conexion_ssl.sendall(f"REGISTRAR {nuevo_usuario} {nueva_password}\n".encode('utf-8'))
 
                         # Recibir respuesta de registro
@@ -109,20 +113,19 @@ def iniciar_cliente(host, port):
                             mensaje_adicional = conexion_ssl.recv(1024).decode('utf-8')
                             print(mensaje_adicional)
 
-                            # Continuar con el flujo de inicio de sesión
-                            print("\n👤 Usuario: ")
-                            usuario = nuevo_usuario
-                            print(usuario)
-                            conexion_ssl.sendall(f"{usuario}\n".encode('utf-8'))
+                            # Recibir nueva solicitud de usuario para iniciar sesión
+                            solicitud_usuario = conexion_ssl.recv(1024).decode('utf-8')
+                            print(solicitud_usuario)
+
+                            # Enviar el usuario recién registrado
+                            conexion_ssl.sendall(f"{nuevo_usuario}\n".encode('utf-8'))
 
                             # Recibir solicitud de contraseña
                             solicitud_password = conexion_ssl.recv(1024).decode('utf-8')
                             print(solicitud_password)
 
-                            # Enviar contraseña
-                            password = nueva_password
-                            print(password)
-                            conexion_ssl.sendall(f"{password}\n".encode('utf-8'))
+                            # Enviar la contraseña recién registrada
+                            conexion_ssl.sendall(f"{nueva_password}\n".encode('utf-8'))
 
                             # Recibir respuesta de autenticación
                             respuesta_auth = conexion_ssl.recv(1024).decode('utf-8')
@@ -130,11 +133,26 @@ def iniciar_cliente(host, port):
 
                             if "✅ Autenticación exitosa" in respuesta_auth:
                                 print("\n💻 Modo de comandos activado. Escribe 'SALIR' para desconectar.")
-                                break  # Continuar al modo de comandos
+                                autenticado = True
+                                break  # Salir del bucle de autenticación
+
+                        # Recibir nueva solicitud de usuario
+                        solicitud_usuario = conexion_ssl.recv(1024).decode('utf-8')
+                        print(solicitud_usuario)
+                        continue
 
                     elif opcion == '3':  # Salir
+                        # Enviar cualquier texto para salir
+                        conexion_ssl.sendall("SALIR\n".encode('utf-8'))
                         print("🔌 Desconectando...")
                         return
+
+                    else:
+                        print("❌ Opción inválida. Intenta nuevamente.")
+                        # Recibir nueva solicitud de usuario
+                        solicitud_usuario = conexion_ssl.recv(1024).decode('utf-8')
+                        print(solicitud_usuario)
+                        continue
 
                 # Modo de comandos
                 while True:
@@ -192,74 +210,6 @@ def iniciar_cliente(host, port):
     except Exception as e:
         print(f"❌ Error: {e}")
 
-def manejar_cliente(conexion_ssl, direccion, directorio=DIRECTORIO_BASE):
-    try:
-        logging.info(f"🔗 Conexión aceptada desde {direccion}")
-        conexion_ssl.sendall("🌍 Bienvenido al server de archivos seguro.\n".encode('utf-8'))
-
-        autenticado = False
-        usuario_id = None
-        permisos = None
-
-        while not autenticado:
-            conexion_ssl.sendall("\n🔹 Opciones:\n   [1] Iniciar sesión\n   [2] Registrarse\n   [3] Salir\n\n👉 Selecciona una opción (1/2/3): ".encode('utf-8'))
-            opcion = conexion_ssl.recv(1024).decode().strip()
-
-            if opcion == '1':
-                conexion_ssl.sendall("\n👤 Usuario: ".encode('utf-8'))
-                usuario = conexion_ssl.recv(1024).decode().strip()
-                conexion_ssl.sendall("🔒 Contraseña: ".encode('utf-8'))
-                password = conexion_ssl.recv(1024).decode().strip()
-
-                datos_usuario = autenticar_usuario_en_servidor(usuario, password)
-                if not datos_usuario:
-                    conexion_ssl.sendall("❌ Credenciales inválidas.\n".encode('utf-8'))
-                    continue
-
-                usuario_id, permisos = datos_usuario
-                conexion_ssl.sendall(f"✅ Autenticación exitosa! Permisos: {permisos}\n".encode('utf-8'))
-                autenticado = True
-
-            elif opcion == '2':
-                conexion_ssl.sendall("\n👤 Nuevo usuario: ".encode('utf-8'))
-                nuevo_usuario = conexion_ssl.recv(1024).decode().strip()
-                conexion_ssl.sendall("🔒 Nueva contraseña: ".encode('utf-8'))
-                nueva_contraseña = conexion_ssl.recv(1024).decode().strip()
-
-                respuesta = registrar_usuario(nuevo_usuario, nueva_contraseña)
-                conexion_ssl.sendall(f"{respuesta}\n".encode('utf-8'))
-
-                # Auto-login tras registro exitoso
-                if "✅ Usuario registrado" in respuesta:
-                    datos_usuario = autenticar_usuario_en_servidor(nuevo_usuario, nueva_contraseña)
-                    if datos_usuario:
-                        usuario_id, permisos = datos_usuario
-                        conexion_ssl.sendall(f"✅ Autenticación automática exitosa! Permisos: {permisos}\n".encode('utf-8'))
-                        autenticado = True
-
-            elif opcion == '3':
-                conexion_ssl.sendall("🔌 Desconectando...\n".encode('utf-8'))
-                return
-            else:
-                conexion_ssl.sendall("❌ Opción inválida.\n".encode('utf-8'))
-
-        while True:
-            conexion_ssl.sendall("\n💻 Ingresar comando ('SALIR' para desconectar): ".encode('utf-8'))
-            comando = conexion_ssl.recv(1024).decode().strip()
-            logging.info(f"📥 Comando recibido: {comando}")
-
-            if comando.upper() == "SALIR":
-                conexion_ssl.sendall("🔌 Desconectando...\n".encode('utf-8'))
-                break
-
-            respuesta = manejar_comando(comando, directorio, usuario_id)
-            conexion_ssl.sendall(f"📄 {respuesta}\n".encode('utf-8'))
-
-    except Exception as e:
-        logging.error(f"❌ Error con cliente {direccion}: {e}")
-    finally:
-        conexion_ssl.close()
-        logging.info(f"🔌 Conexión cerrada con {direccion}")
 
 
 if __name__ == "__main__":
