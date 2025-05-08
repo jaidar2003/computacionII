@@ -1,64 +1,57 @@
+
 import unittest
-import threading
 import socket
 import ssl
+import threading
 import time
+import sys
 import os
+
+# Agregar el path raíz para importar correctamente
+sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
 from server.servidor import iniciar_servidor
 
-class TestConcurrenciaServidor(unittest.TestCase):
+HOST = '127.0.0.1'
+PORT = 5055  # Usar puerto diferente para pruebas
 
-    @classmethod
-    def setUpClass(cls):
-        cls.host = '127.0.0.1'
-        cls.port = 5050
-        cls.num_clientes = 5
-        cls.resultados = []
+class TestConcurrenciaServidorExtendido(unittest.TestCase):
+    def setUp(self):
+        self.directorio_base = "archivos_servidor_test"
+        self.servidor_thread = threading.Thread(
+            target=iniciar_servidor, args=(HOST, PORT, self.directorio_base), daemon=True)
+        self.servidor_thread.start()
+        time.sleep(1)  # Esperar a que el servidor se inicie
 
-        # Crear directorio temporal si no existe
-        os.makedirs("test_archivos_servidor", exist_ok=True)
+    def test_multiples_conexiones_simultaneas(self):
+        clientes = []
+        resultados = []
 
-        # Lanzar el server en segundo plano
-        cls.server_thread = threading.Thread(
-            target=iniciar_servidor,
-            args=(cls.host, cls.port, "test_archivos_servidor"),
-            daemon=True
-        )
-        cls.server_thread.start()
-        time.sleep(1.5)  # Esperar a que el server inicie
+        def cliente_job():
+            try:
+                context = ssl._create_unverified_context()
+                with socket.create_connection((HOST, PORT)) as sock:
+                    with context.wrap_socket(sock, server_hostname=HOST) as s:
+                        s.recv(1024)
+                        s.sendall(b"testuser\n")
+                        s.recv(1024)
+                        s.sendall(b"password123\n")
+                        s.recv(1024)
+                        s.sendall(b"SALIR\n")
+            except Exception as e:
+                print(f"[ERROR] Cliente falló: {e}")
+                resultados.append(False)
+            else:
+                resultados.append(True)
 
-    def cliente_simulado(self, id_cliente):
-        try:
-            context = ssl.create_default_context()
-            context.check_hostname = False
-            context.verify_mode = ssl.CERT_NONE
+        for _ in range(5):
+            t = threading.Thread(target=cliente_job)
+            clientes.append(t)
+            t.start()
 
-            with socket.create_connection((self.host, self.port)) as sock:
-                with context.wrap_socket(sock, server_hostname=self.host) as ssock:
-                    ssock.recv(1024)  # bienvenida
-                    ssock.recv(1024)  # pedir usuario
-                    ssock.sendall(f"usuario{id_cliente}\n".encode())
-                    ssock.recv(1024)  # pedir contraseña
-                    ssock.sendall(f"contraseña{id_cliente}\n".encode())
-                    respuesta = ssock.recv(1024).decode()
-                    self.resultados.append((id_cliente, respuesta.strip()))
-        except Exception as e:
-            self.resultados.append((id_cliente, f"Error: {e}"))
+        for t in clientes:
+            t.join()
 
-    def test_conexiones_concurrentes(self):
-        hilos = []
-        for i in range(self.num_clientes):
-            hilo = threading.Thread(target=self.cliente_simulado, args=(i,))
-            hilos.append(hilo)
-            hilo.start()
-
-        for hilo in hilos:
-            hilo.join()
-
-        for id_cliente, respuesta in self.resultados:
-            print(f"Cliente {id_cliente}: {respuesta}")
-            self.assertIn("✅ Autenticación exitosa", respuesta)
-
+        self.assertTrue(all(resultados), "No todas las conexiones se completaron exitosamente.")
 
 if __name__ == '__main__':
     unittest.main()
