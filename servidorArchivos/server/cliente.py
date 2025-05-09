@@ -64,21 +64,18 @@ def iniciar_cliente(host, port, test_mode=False):
                 # Bucle de autenticación
                 while not autenticado:
                     # Mostrar menú de opciones localmente
-                    print("\n🔹 Opciones:\n   [1] Iniciar sesión\n   [2] Registrarse\n   [3] Salir\n 👉 Selecciona una opción (1/2/3): ")
-                    opcion = input()
+                    opcion = input("\n🔹 Opciones:\n   [1] Iniciar sesión\n   [2] Registrarse\n   [3] Salir\n 👉 Selecciona una opción (1/2/3): ")
 
                     if opcion == '1':  # Iniciar sesión
                         # Enviar nombre de usuario
-                        print("\n👤 Usuario: ")
-                        usuario = input()
+                        usuario = input("\n👤 Usuario: ")
                         conexion_ssl.sendall(f"{usuario}\n".encode('utf-8'))
 
                         # Recibir solicitud de contraseña
                         solicitud_password = conexion_ssl.recv(1024).decode('utf-8')
-                        print(solicitud_password)
 
                         # Enviar contraseña
-                        password = input()
+                        password = input(solicitud_password)
                         conexion_ssl.sendall(f"{password}\n".encode('utf-8'))
 
                         # Recibir respuesta de autenticación
@@ -86,31 +83,36 @@ def iniciar_cliente(host, port, test_mode=False):
                         print(respuesta_auth)
 
                         if "✅ Autenticación exitosa" in respuesta_auth:
-                            print("\n💻 Modo de comandos activado. Escribe 'SALIR' para desconectar.")
+                            print("\n💻 Modo de comandos activado")
+                            print("\n📋 Comandos disponibles:")
+                            print("  • LISTAR - Muestra todos los archivos en el servidor")
+                            print("  • CREAR [nombre_archivo] - Crea un nuevo archivo")
+                            print("  • ELIMINAR [nombre_archivo] - Elimina un archivo")
+                            print("  • RENOMBRAR [nombre_viejo] [nombre_nuevo] - Renombra un archivo")
+                            print("  • SALIR - Desconecta del servidor")
                             autenticado = True
                             break  # Salir del bucle de autenticación
                         else:
-                            # Si la autenticación falló, verificar si el siguiente input es SALIR
+                            # Si la autenticación falló, mostrar opciones claras
                             try:
-                                siguiente_opcion = input()
-                                if siguiente_opcion.upper() == "SALIR":
+                                print("\n❌ Credenciales inválidas. ¿Qué deseas hacer?")
+                                siguiente_opcion = input("1. Intentar nuevamente\n2. Salir\n👉 Selecciona una opción (1/2): ")
+                                if siguiente_opcion == "2" or siguiente_opcion.upper() == "SALIR":
                                     conexion_ssl.sendall("SALIR\n".encode('utf-8'))
                                     print("🔌 Desconectando...")
                                     return
                             except:
                                 pass
 
-                            # Si no es SALIR, volver a recibir la solicitud de usuario
+                            # Si eligió intentar nuevamente, volver a recibir la solicitud de usuario
                             solicitud_usuario = conexion_ssl.recv(1024).decode('utf-8')
                             print(solicitud_usuario)
                             continue
 
                     elif opcion == '2':  # Registrarse
                         # Solicitar datos para registro
-                        print("\n👤 Nuevo usuario: ")
-                        nuevo_usuario = input()
-                        print("🔒 Nueva contraseña: ")
-                        nueva_password = input()
+                        nuevo_usuario = input("\n👤 Nuevo usuario: ")
+                        nueva_password = input("🔒 Nueva contraseña: ")
 
                         # Enviar comando de registro
                         conexion_ssl.sendall(f"REGISTRAR {nuevo_usuario} {nueva_password}\n".encode('utf-8'))
@@ -120,31 +122,38 @@ def iniciar_cliente(host, port, test_mode=False):
                         print(respuesta_registro)
 
                         if "✅ Usuario registrado" in respuesta_registro:
-                            # Verificar si el siguiente input es "3" (Salir)
+                            # Preguntar al usuario si desea iniciar sesión
                             try:
-                                siguiente_opcion = input()
+                                siguiente_opcion = input("\n¿Desea iniciar sesión con el usuario recién registrado?\n1. Sí, iniciar sesión\n2. No, volver al menú principal\n3. Salir\n")
                                 if siguiente_opcion == "3":
                                     conexion_ssl.sendall("SALIR\n".encode('utf-8'))
                                     print("🔌 Desconectando...")
                                     return
+                                elif siguiente_opcion == "2":
+                                    # Enviar SALIR para terminar la sesión actual
+                                    conexion_ssl.sendall("SALIR\n".encode('utf-8'))
+                                    print("🔄 Volviendo al menú principal...")
+
+                                    # Recibir nueva solicitud de usuario
+                                    solicitud_usuario = conexion_ssl.recv(1024).decode('utf-8')
+                                    print(solicitud_usuario)
+                                    continue
                             except:
                                 pass
 
-                            # Si no es "3", continuar con el flujo normal
+                            # Si eligió iniciar sesión o hubo un error, continuar con el flujo normal
                             # Recibir mensaje adicional del servidor
                             mensaje_adicional = conexion_ssl.recv(1024).decode('utf-8')
                             print(mensaje_adicional)
 
                             # Recibir nueva solicitud de usuario para iniciar sesión
                             solicitud_usuario = conexion_ssl.recv(1024).decode('utf-8')
-                            print(solicitud_usuario)
 
                             # Enviar el usuario recién registrado
                             conexion_ssl.sendall(f"{nuevo_usuario}\n".encode('utf-8'))
 
                             # Recibir solicitud de contraseña
                             solicitud_password = conexion_ssl.recv(1024).decode('utf-8')
-                            print(solicitud_password)
 
                             # Enviar la contraseña recién registrada
                             conexion_ssl.sendall(f"{nueva_password}\n".encode('utf-8'))
@@ -155,32 +164,15 @@ def iniciar_cliente(host, port, test_mode=False):
 
                             if "✅ Autenticación exitosa" in respuesta_auth:
                                 print("\n💻 Modo de comandos activado. Escribe 'SALIR' para desconectar.")
+                                print("\n📋 Comandos disponibles:")
+                                print("  • LISTAR - Muestra todos los archivos en el servidor")
+                                print("  • CREAR [nombre_archivo] - Crea un nuevo archivo")
+                                print("  • ELIMINAR [nombre_archivo] - Elimina un archivo")
+                                print("  • RENOMBRAR [nombre_viejo] [nombre_nuevo] - Renombra un archivo")
+                                print("  • SALIR - Desconecta del servidor")
                                 autenticado = True
 
-                                # Procesar comandos adicionales después de la autenticación
-                                try:
-                                    # Recibir solicitud de comando
-                                    solicitud_comando = conexion_ssl.recv(1024).decode('utf-8')
-                                    print(solicitud_comando)
-
-                                    # Enviar comando LISTAR si está en los inputs
-                                    comando = input()
-                                    conexion_ssl.sendall(f"{comando}\n".encode('utf-8'))
-
-                                    # Recibir respuesta del comando
-                                    respuesta_comando = conexion_ssl.recv(1024).decode('utf-8')
-                                    print(respuesta_comando)
-
-                                    # Enviar comando SALIR si está en los inputs
-                                    comando = input()
-                                    conexion_ssl.sendall(f"{comando}\n".encode('utf-8'))
-
-                                    # Si el comando es SALIR, terminar
-                                    if comando.upper() == "SALIR":
-                                        print("🔌 Desconectando...")
-                                        return
-                                except:
-                                    pass
+                                # No procesamos comandos adicionales aquí, dejamos que el bucle principal de comandos lo haga
 
                                 break  # Salir del bucle de autenticación
 
@@ -204,20 +196,22 @@ def iniciar_cliente(host, port, test_mode=False):
 
                 # Modo de comandos
                 while True:
-                    # Recibir solicitud de comando
-                    solicitud_comando = conexion_ssl.recv(1024).decode('utf-8')
-                    print(solicitud_comando)
+                    try:
+                        # Recibir solicitud de comando
+                        solicitud_comando = conexion_ssl.recv(1024).decode('utf-8')
 
-                    # Enviar comando
-                    comando = input()
+                        # Enviar comando
+                        comando = input(solicitud_comando)
+                    except Exception as e:
+                        print(f"❌ Error al recibir comando: {e}")
+                        break
 
                     # Manejar comando CREAR especialmente para calcular y enviar hash
                     if comando.upper().startswith("CREAR "):
                         partes = comando.split()
                         if len(partes) == 2:
                             # Solicitar ruta del archivo local
-                            print("📂 Ruta del archivo local: ")
-                            archivo_local = input()
+                            archivo_local = input("📂 Ruta del archivo local: ")
 
                             if os.path.exists(archivo_local):
                                 # Calcular hash del archivo
@@ -241,34 +235,21 @@ def iniciar_cliente(host, port, test_mode=False):
                             else:
                                 print(f"❌ El archivo local '{archivo_local}' no existe.")
 
-                    # Enviar el comando actual
-                    conexion_ssl.sendall(f"{comando}\n".encode('utf-8'))
+                    try:
+                        # Enviar el comando actual
+                        conexion_ssl.sendall(f"{comando}\n".encode('utf-8'))
 
-                    # Si el comando es LISTAR y estamos en el test_iniciar_cliente_login_exitoso
-                    # (detectado por la secuencia de inputs y respuestas del servidor)
-                    if comando.upper() == "LISTAR" and "✅ Autenticación exitosa" in respuesta_auth:
-                        # Recibir respuesta del comando LISTAR
-                        respuesta_comando = conexion_ssl.recv(1024).decode('utf-8')
-                        print(respuesta_comando)
-
-                        # Enviar SALIR después de LISTAR (para el test)
-                        try:
-                            siguiente_comando = input()
-                            if siguiente_comando.upper() == "SALIR":
-                                conexion_ssl.sendall(f"{siguiente_comando}\n".encode('utf-8'))
-                                print("🔌 Desconectando...")
-                                return
-                        except:
-                            pass
-
-                    # Si el comando es SALIR, terminar
-                    if comando.upper() == "SALIR":
-                        print("🔌 Desconectando...")
+                        # Si el comando es SALIR, terminar
+                        if comando.upper() == "SALIR":
+                            print("🔌 Desconectando...")
+                            break
+                        else:
+                            # Recibir respuesta del comando
+                            respuesta_comando = conexion_ssl.recv(1024).decode('utf-8')
+                            print(respuesta_comando)
+                    except Exception as e:
+                        print(f"❌ Error al enviar comando o recibir respuesta: {e}")
                         break
-                    else:
-                        # Recibir respuesta del comando
-                        respuesta_comando = conexion_ssl.recv(1024).decode('utf-8')
-                        print(respuesta_comando)
 
     except ConnectionRefusedError:
         print(f"❌ No se pudo conectar al servidor {host}:{port}. Asegúrate de que el servidor esté en ejecución.")
@@ -288,9 +269,15 @@ if __name__ == "__main__":
     host = 'localhost'
     port = 5050
 
-    print("🌍 Cliente de Archivos Seguro")
-    print("============================")
-    print("Este cliente te permite conectarte a un servidor de archivos seguro.")
-    print("Podrás registrarte, iniciar sesión y gestionar archivos de forma segura.")
-    print(f"🌍 Conectando al Servidor de Archivos Seguro en {host}:{port}...")
+    # Imprimir un banner más atractivo
+    print("\n" + "="*60)
+    print("🌟 🔒 🌟 CLIENTE DE ARCHIVOS SEGURO 🌟 🔒 🌟".center(60))
+    print("="*60)
+    print("\n📋 INFORMACIÓN:")
+    print("  • Este cliente te permite conectarte a un servidor de archivos seguro")
+    print("  • Podrás registrarte, iniciar sesión y gestionar archivos de forma segura")
+    print("  • Todas las comunicaciones están protegidas con encriptación SSL")
+    print("\n🔄 ESTADO:")
+    print(f"  • Conectando al Servidor de Archivos Seguro en {host}:{port}...")
+    print("="*60 + "\n")
     iniciar_cliente(host, port)
