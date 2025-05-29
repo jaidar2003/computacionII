@@ -1,26 +1,13 @@
 import os
 import sqlite3
-import bcrypt
 from datetime import datetime
 from dotenv import load_dotenv
 
 load_dotenv()
 
-# ---------------------------
-# 🔌 Conexión y configuración
-# ---------------------------
-
 def obtener_conexion():
-    """
-    Retorna una conexión a la base de datos.
-    Usa DB_PATH de entorno o una ruta por defecto.
-    """
     db_path = os.getenv('DB_PATH', os.path.join(os.path.dirname(__file__), 'servidor_archivos.db'))
     return sqlite3.connect(db_path)
-
-# ---------------------------
-# 🛠️ Crear tablas
-# ---------------------------
 
 def crear_tablas():
     try:
@@ -60,16 +47,11 @@ def crear_tablas():
 
         conn.commit()
         conn.close()
-
         print("✅ Tablas creadas o ya existentes.")
         return True
     except Exception as e:
         print(f"❌ Error al crear tablas: {e}")
         return False
-
-# ---------------------------
-# 👤 Registro y autenticación
-# ---------------------------
 
 def registrar_usuario(username, password, permisos='lectura'):
     try:
@@ -80,14 +62,13 @@ def registrar_usuario(username, password, permisos='lectura'):
             conn.close()
             return "❌ Usuario ya existente."
 
-        hashed = bcrypt.hashpw(password.encode('utf-8'), bcrypt.gensalt())
+        hashed = hash_password(password)  # ✅ Usar función centralizada
         cursor.execute(
             "INSERT INTO usuarios (username, password, permisos) VALUES (?, ?, ?)",
-            (username, hashed.decode('utf-8'), permisos)
+            (username, hashed, permisos)
         )
         conn.commit()
         conn.close()
-
         return "✅ Usuario registrado exitosamente."
     except Exception as e:
         return f"❌ Error al registrar usuario: {e}"
@@ -100,16 +81,12 @@ def autenticar_usuario(username, password):
         user = cursor.fetchone()
         conn.close()
 
-        if user and bcrypt.checkpw(password.encode('utf-8'), user[1].encode('utf-8')):
-            return (user[0], user[2])  # Retorna ID y permisos
+        if user and verificar_password(password, user[1]):  # ✅ Usar función centralizada
+            return (user[0], user[2])
         return None
     except Exception as e:
         print(f"❌ Error en autenticación: {e}")
         return None
-
-# ---------------------------
-# 📝 Registro de logs
-# ---------------------------
 
 def registrar_log(usuario_id, accion, archivo=None):
     try:

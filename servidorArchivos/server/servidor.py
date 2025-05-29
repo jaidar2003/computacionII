@@ -25,8 +25,8 @@ from base_datos.db import log_evento
 
 load_dotenv()
 
-HOST = os.getenv("SERVIDOR_HOST", "0.0.0.0")
-PORT = int(os.getenv("SERVIDOR_PORT", 5050))
+HOST = os.getenv("SERVIDOR_HOST", "127.0.0.0")
+PORT = int(os.getenv("SERVIDOR_PORT", 1608))
 DIRECTORIO_BASE = os.getenv("SERVIDOR_DIR", "archivos_servidor")
 
 logging.basicConfig(
@@ -86,42 +86,6 @@ def manejar_cliente(conexion_ssl, direccion, directorio):
     finally:
         conexion_ssl.close()
 
-
-def iniciar_servidor(host=HOST, port=PORT, directorio=DIRECTORIO_BASE):
-    if not os.path.exists(directorio):
-        os.makedirs(directorio)
-
-    contexto = ssl.create_default_context(ssl.Purpose.CLIENT_AUTH)
-    BASE_DIR = os.path.dirname(os.path.dirname(__file__))
-    cert_path = os.path.join(BASE_DIR, "certificados", "certificado.pem")
-    key_path = os.path.join(BASE_DIR, "certificados", "llave.pem")
-
-    try:
-        contexto.load_cert_chain(certfile=cert_path, keyfile=key_path)
-    except FileNotFoundError:
-        logging.error(f"❌ Error: No se encontraron los certificados en {cert_path} o {key_path}.")
-        return
-
-    try:
-        addr_info = socket.getaddrinfo(host, port, socket.AF_UNSPEC, socket.SOCK_STREAM)
-        family, socktype, proto, canonname, sockaddr = addr_info[0]
-
-        with socket.socket(family, socktype, proto) as servidor:
-            servidor.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
-            servidor.bind((host, port))
-            servidor.listen(5)
-            logging.info(f"✅ Servidor escuchando en {host}:{port}")
-
-            while True:
-                conexion, direccion = servidor.accept()
-                try:
-                    conexion_ssl = contexto.wrap_socket(conexion, server_side=True)
-                    threading.Thread(target=manejar_cliente, args=(conexion_ssl, direccion, directorio)).start()
-                except ssl.SSLError as e:
-                    logging.error(f"❌ Error SSL con {direccion}: {e}")
-                    conexion.close()
-    except Exception as e:
-        logging.error(f"❌ Error al iniciar el server: {e}")
 
 if __name__ == "__main__":
     import argparse
