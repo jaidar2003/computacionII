@@ -1,0 +1,15 @@
+# Required dependencies
+python-dotenv>=0.19.0
+
+# Optional dependencies
+# Uncomment the following lines to enable additional features
+
+# For background task processing
+celery>=5.2.0
+redis>=4.0.0
+
+# For secure password hashing
+bcrypt>=4.0.0
+
+# External system dependencies (not installable via pip)
+# ClamAV: For virus scanning (install via your system package manager)
