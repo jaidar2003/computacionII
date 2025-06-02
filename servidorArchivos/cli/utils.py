@@ -1,13 +1,5 @@
-"""
-🛠️ Utilidades para el Cliente del Servidor de Archivos
-----------------------------------------------------
-Este módulo proporciona funciones de utilidad para el cliente,
-como entrada segura de contraseñas y cálculo de hashes.
-
-Funciones principales:
-- 🔒 Entrada segura de contraseñas (ocultando la entrada)
-- 🔍 Cálculo de hash SHA-256 para verificación de integridad
-"""
+# 🛠️ Utilidades para el Cliente del Servidor de Archivos
+# Proporciona funciones para entrada segura de contraseñas y cálculo de hashes
 
 import os
 import hashlib
@@ -18,18 +10,7 @@ import logging
 logger = logging.getLogger(__name__)
 
 def input_password(prompt="Contraseña: "):
-    """
-    🔒 Solicita una contraseña al usuario ocultando la entrada.
-
-    Intenta determinar el mejor método para ocultar la entrada del usuario
-    según el entorno. Suprime advertencias y utiliza fallbacks apropiados.
-
-    Args:
-        prompt (str, optional): Mensaje a mostrar al usuario. Defaults to "Contraseña: ".
-
-    Returns:
-        str: Contraseña ingresada por el usuario
-    """
+    """🔒 Solicita contraseña ocultando la entrada si es posible"""
     import sys
     import io
     import warnings
@@ -58,18 +39,7 @@ def input_password(prompt="Contraseña: "):
         return input(prompt)
 
 def calcular_hash_archivo(ruta_archivo):
-    """
-    🔍 Calcula el hash SHA-256 de un archivo.
-
-    Lee el archivo en modo binario y calcula su hash SHA-256,
-    útil para verificar la integridad del archivo en el servidor.
-
-    Args:
-        ruta_archivo (str): Ruta al archivo a procesar
-
-    Returns:
-        str: Hash SHA-256 en formato hexadecimal o None si ocurre un error
-    """
+    """🔍 Calcula el hash SHA-256 de un archivo para verificar integridad"""
     if not os.path.exists(ruta_archivo):
         logger.error(f"❌ El archivo no existe: {ruta_archivo}")
         print(f"❌ El archivo no existe: {ruta_archivo}")
@@ -82,6 +52,8 @@ def calcular_hash_archivo(ruta_archivo):
 
     try:
         # Abrir archivo en modo binario y calcular hash
+        print(f"🔍 Calculando hash SHA-256 para '{os.path.basename(ruta_archivo)}'...")
+
         with open(ruta_archivo, 'rb') as archivo:
             # Leer todo el contenido
             contenido = archivo.read()
@@ -89,6 +61,7 @@ def calcular_hash_archivo(ruta_archivo):
             # Calcular hash SHA-256
             hash_resultado = hashlib.sha256(contenido).hexdigest()
 
+            print(f"✅ Hash calculado correctamente: {hash_resultado[:8]}...")
             logger.debug(f"✅ Hash calculado para {ruta_archivo}: {hash_resultado[:8]}...")
             return hash_resultado
 

@@ -230,11 +230,18 @@ def _registrar_evento(resultado):
         resultado (dict): Resultado de la verificación
     """
     try:
+        mensaje_detallado = (
+            f"{resultado['estado'].upper()} - "
+            f"Integridad: {resultado['integridad']} - "
+            f"Antivirus: {resultado['virus']} - "
+            f"{resultado['mensaje']}"
+        )
+
         log_evento(
             "celery", 
             "localhost", 
             "VERIFICACION", 
-            f"{resultado['estado'].upper()} - {resultado['mensaje']}"
+            mensaje_detallado
         )
     except Exception as error:
         print(f"❌ ERROR: No se pudo guardar el resultado en log_eventos: {error}")

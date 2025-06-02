@@ -19,6 +19,7 @@ def mostrar_comandos_disponibles(permisos):
     print("  - CREAR [archivo]")
     print("  - ELIMINAR [archivo]")
     print("  - RENOMBRAR [viejo] [nuevo]")
+    print("  - VERIFICAR [archivo]")
     if permisos == "admin":
         print("  - APROBAR_PERMISOS [id] [aprobar/rechazar]")
     print("  - SALIR")

@@ -1,41 +1,21 @@
-"""
-📝 Módulo de Comandos del Servidor de Archivos
----------------------------------------------
-Este módulo implementa los comandos que pueden ejecutar los usuarios
-en el servidor de archivos, incluyendo operaciones de archivos y
-gestión de permisos.
-
-Comandos disponibles:
-- 📋 LISTAR: Muestra los archivos disponibles en el servidor
-- 📄 CREAR: Crea un nuevo archivo en el servidor
-- 🗑️ ELIMINAR: Elimina un archivo del servidor
-- ✏️ RENOMBRAR: Cambia el nombre de un archivo
-- 🔑 SOLICITAR_PERMISOS: Solicita cambio de nivel de permisos
-- ✅ APROBAR_PERMISOS: Aprueba una solicitud de cambio de permisos
-- 📊 VER_SOLICITUDES: Muestra las solicitudes de permisos pendientes
-"""
+"""📝 Comandos del Servidor de Archivos
+Implementa comandos para operaciones con archivos (LISTAR, CREAR, ELIMINAR, RENOMBRAR)
+y gestión de permisos (SOLICITAR_PERMISOS, APROBAR_PERMISOS, VER_SOLICITUDES)."""
 
 import os
 import sys
+import socket
 from functools import wraps
 
-# 🔧 Asegurar que el path raíz esté en sys.path antes de cualquier import personalizado
+# Configuración básica
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
 
 from tareas.celery import verificar_integridad_y_virus
 from base_datos.db import obtener_conexion
 
-# 🛡️ Decorador para validar argumentos de comandos
+# Decorador para validar argumentos
 def validar_argumentos(num_args=None, min_args=None, max_args=None, mensaje_error=None):
-    """
-    Decorador que valida el número de argumentos para un comando.
-
-    Args:
-        num_args (int, optional): Número exacto de argumentos requeridos
-        min_args (int, optional): Número mínimo de argumentos requeridos
-        max_args (int, optional): Número máximo de argumentos permitidos
-        mensaje_error (str, optional): Mensaje de error personalizado
-    """
+    """Decorador que valida el número de argumentos para un comando"""
     def decorador(func):
         @wraps(func)
         def wrapper(partes, *args, **kwargs):
@@ -55,15 +35,15 @@ def validar_argumentos(num_args=None, min_args=None, max_args=None, mensaje_erro
         return wrapper
     return decorador
 
-# 📋 Manejadores de comandos
+# Manejadores de comandos
 def _cmd_listar(partes, directorio_base, usuario_id=None):
-    """Maneja el comando LISTAR."""
+    """Maneja comando LISTAR"""
     return listar_archivos(directorio_base)
 
 @validar_argumentos(min_args=1, max_args=2, 
                    mensaje_error="❌ Formato incorrecto. Usa: CREAR nombre_archivo [hash]")
 def _cmd_crear(partes, directorio_base, usuario_id=None):
-    """Maneja el comando CREAR."""
+    """Maneja comando CREAR"""
     if len(partes) == 2:
         return crear_archivo(directorio_base, partes[1])
     else:  # len(partes) == 3
@@ -72,34 +52,42 @@ def _cmd_crear(partes, directorio_base, usuario_id=None):
 @validar_argumentos(num_args=1, 
                    mensaje_error="❌ Formato incorrecto. Usa: ELIMINAR nombre_archivo")
 def _cmd_eliminar(partes, directorio_base, usuario_id=None):
-    """Maneja el comando ELIMINAR."""
+    """Maneja comando ELIMINAR"""
     return eliminar_archivo(directorio_base, partes[1])
 
 @validar_argumentos(num_args=2, 
                    mensaje_error="❌ Formato incorrecto. Usa: RENOMBRAR nombre_viejo nombre_nuevo")
 def _cmd_renombrar(partes, directorio_base, usuario_id=None):
-    """Maneja el comando RENOMBRAR."""
+    """Maneja comando RENOMBRAR"""
     return renombrar_archivo(directorio_base, partes[1], partes[2])
 
 @validar_argumentos(num_args=1, 
                    mensaje_error="❌ Formato incorrecto. Usa: SOLICITAR_PERMISOS tipo_permiso")
 def _cmd_solicitar_permisos(partes, directorio_base, usuario_id=None):
-    """Maneja el comando SOLICITAR_PERMISOS."""
+    """Maneja comando SOLICITAR_PERMISOS"""
     return solicitar_cambio_permisos(usuario_id, partes[1])
 
 @validar_argumentos(num_args=2, 
                    mensaje_error="❌ Formato incorrecto. Usa: APROBAR_PERMISOS id_solicitud decision")
 def _cmd_aprobar_permisos(partes, directorio_base, usuario_id=None):
-    """Maneja el comando APROBAR_PERMISOS."""
+    """Maneja comando APROBAR_PERMISOS"""
     return aprobar_cambio_permisos(usuario_id, partes[1], partes[2])
 
 @validar_argumentos(num_args=0, 
                    mensaje_error="❌ Formato incorrecto. Usa: VER_SOLICITUDES")
 def _cmd_ver_solicitudes(partes, directorio_base, usuario_id=None):
-    """Maneja el comando VER_SOLICITUDES."""
+    """Maneja comando VER_SOLICITUDES"""
     return ver_solicitudes_permisos(usuario_id)
 
 # 🗺️ Mapeo de comandos a sus manejadores
+def _cmd_verificar(partes, directorio_base, usuario_id=None):
+    """Maneja comando VERIFICAR para comprobar estado de archivos"""
+    if len(partes) != 2:
+        return "❌ Uso: VERIFICAR [archivo]"
+
+    nombre_archivo = partes[1]
+    return verificar_estado_archivo(directorio_base, nombre_archivo)
+
 COMANDOS = {
     "LISTAR": _cmd_listar,
     "CREAR": _cmd_crear,
@@ -108,6 +96,7 @@ COMANDOS = {
     "SOLICITAR_PERMISOS": _cmd_solicitar_permisos,
     "APROBAR_PERMISOS": _cmd_aprobar_permisos,
     "VER_SOLICITUDES": _cmd_ver_solicitudes,
+    "VERIFICAR": _cmd_verificar,
 }
 
 def manejar_comando(comando, directorio_base, usuario_id=None):
@@ -157,7 +146,7 @@ def listar_archivos(directorio_base):
     except Exception as error:
         return f"❌ Error al listar archivos: {error}"
 
-def crear_archivo(directorio_base, nombre_archivo, hash_esperado=None):
+def crear_archivo(directorio_base, nombre_archivo, hash_esperado=None, conexion=None):
     """
     📝 Crea un nuevo archivo en el servidor.
 
@@ -165,6 +154,7 @@ def crear_archivo(directorio_base, nombre_archivo, hash_esperado=None):
         directorio_base (str): Ruta al directorio donde se almacenan los archivos
         nombre_archivo (str): Nombre del archivo a crear
         hash_esperado (str, optional): Hash SHA-256 esperado para verificación
+        conexion (ssl.SSLSocket, optional): Conexión SSL con el cliente para recibir contenido
 
     Returns:
         str: Mensaje de éxito o error
@@ -181,18 +171,51 @@ def crear_archivo(directorio_base, nombre_archivo, hash_esperado=None):
         if os.path.exists(ruta):
             return f"⚠️ El archivo '{nombre_archivo}' ya existe."
 
-        # Crear archivo vacío
-        with open(ruta, 'w') as _:
-            pass  # Solo crear el archivo
+        # Si tenemos hash y conexión, esperamos recibir el contenido del archivo
+        if hash_esperado and conexion:
+            # Enviar mensaje de aceptación
+            _enviar_mensaje(conexion, f"✅ Listo para recibir '{nombre_archivo}'")
+
+            # Recibir tamaño del archivo
+            tamaño = int(conexion.recv(1024).decode().strip())
+
+            # Recibir contenido del archivo y escribir directamente a disco
+            bytes_recibidos = 0
+            try:
+                with open(ruta, 'wb') as f:
+                    while bytes_recibidos < tamaño:
+                        chunk_size = min(8192, tamaño - bytes_recibidos)
+                        try:
+                            chunk = conexion.recv(chunk_size)
+                            if not chunk:  # Conexión cerrada por el cliente
+                                raise ConnectionError("Conexión cerrada por el cliente durante la transferencia")
+                            f.write(chunk)
+                            bytes_recibidos += len(chunk)
+                        except socket.timeout:
+                            raise TimeoutError("Tiempo de espera agotado durante la recepción del archivo")
+            except (TimeoutError, ConnectionError, OSError) as e:
+                # Eliminar el archivo parcial si hubo un error
+                if os.path.exists(ruta):
+                    os.remove(ruta)
+                raise Exception(f"Error durante la recepción del archivo: {str(e)}")
+
+            # Enviar confirmación
+            _enviar_mensaje(conexion, f"✅ Archivo '{nombre_archivo}' recibido correctamente ({bytes_recibidos} bytes)")
+        else:
+            # Crear archivo vacío (comportamiento actual)
+            with open(ruta, 'w') as _:
+                pass
 
         # Iniciar verificación en segundo plano
         _iniciar_verificacion(ruta, hash_esperado)
 
-        # Retornar mensaje apropiado
-        if hash_esperado:
-            return f"✅ Archivo '{nombre_archivo}' creado y enviado para verificación con hash."
-        else:
-            return f"✅ Archivo '{nombre_archivo}' creado y enviado para verificación."
+        # Retornar mensaje apropiado (solo si no enviamos ya una respuesta)
+        if not (hash_esperado and conexion):
+            if hash_esperado:
+                return f"✅ Archivo '{nombre_archivo}' creado y enviado para verificación con hash."
+            else:
+                return f"✅ Archivo '{nombre_archivo}' creado y enviado para verificación."
+
     except Exception as error:
         return f"❌ Error al crear archivo: {error}"
 
@@ -283,6 +306,49 @@ def _iniciar_verificacion(ruta, hash_esperado=None):
         hash_esperado (str, optional): Hash SHA-256 esperado para verificación
     """
     verificar_integridad_y_virus.delay(ruta, hash_esperado)
+
+def verificar_estado_archivo(directorio_base, nombre_archivo):
+    """
+    🔍 Consulta el estado de verificación de un archivo.
+
+    Args:
+        directorio_base (str): Ruta al directorio donde se almacenan los archivos
+        nombre_archivo (str): Nombre del archivo a verificar
+
+    Returns:
+        str: Mensaje con el estado de verificación
+    """
+    try:
+        # Validar nombre de archivo
+        if not _es_nombre_archivo_valido(nombre_archivo):
+            return "❌ Nombre de archivo inválido."
+
+        # Construir ruta completa
+        ruta = os.path.join(directorio_base, nombre_archivo)
+
+        # Verificar si existe
+        if not os.path.exists(ruta):
+            return f"⚠️ Archivo '{nombre_archivo}' no encontrado."
+
+        # Consultar estado en la base de datos
+        conn = obtener_conexion()
+        cursor = conn.cursor()
+        cursor.execute("""
+            SELECT accion, mensaje FROM log_eventos 
+            WHERE accion = 'VERIFICACION' AND mensaje LIKE ? 
+            ORDER BY fecha DESC LIMIT 1
+        """, (f"%{nombre_archivo}%",))
+
+        resultado = cursor.fetchone()
+        conn.close()
+
+        if resultado:
+            return f"📋 Estado de verificación para '{nombre_archivo}':\n{resultado[1]}"
+        else:
+            return f"ℹ️ No hay información de verificación para '{nombre_archivo}'."
+
+    except Exception as error:
+        return f"❌ Error al consultar estado: {error}"
 
 def solicitar_cambio_permisos(usuario_id, permiso_solicitado):
     """

@@ -1,15 +1,6 @@
-"""
-🌐 Servidor de Archivos Seguro - Módulo Servidor
-------------------------------------------------
-Este módulo implementa la lógica del servidor que maneja las conexiones
-de los clientes, la autenticación de usuarios y el procesamiento de comandos.
-
-Características principales:
-- 🔒 Conexiones seguras mediante SSL
-- 👤 Autenticación de usuarios
-- 📝 Procesamiento de comandos para gestión de archivos
-- 🧵 Manejo de múltiples clientes mediante hilos
-"""
+"""🌐 Servidor de Archivos Seguro
+Maneja conexiones SSL, autenticación de usuarios, procesamiento de comandos
+y múltiples clientes mediante hilos."""
 
 import socket
 import ssl
@@ -19,33 +10,27 @@ import os
 import sys
 from dotenv import load_dotenv
 
-# 🔧 Asegurar que el path raíz esté en sys.path antes de cualquier import personalizado
+# Configuración básica
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
 
-# 📚 Importaciones con manejo de errores para diferentes contextos de ejecución
+# Importaciones con manejo de errores
 try:
-    # Importar como parte del paquete (para tests y cuando se importa como módulo)
     from server.comandos import manejar_comando
     from server.seguridad import autenticar_usuario_en_servidor, registrar_usuario
 except ImportError:
-    # Importar localmente (para ejecución directa del script)
     sys.path.append(os.path.dirname(os.path.abspath(__file__)))
     from comandos import manejar_comando
     from seguridad import autenticar_usuario_en_servidor, registrar_usuario
 
-# Este import funciona en ambos casos
 from base_datos.db import log_evento
-
-# 📦 Cargar variables de entorno
 load_dotenv()
 
-# 🌐 Configuración del servidor
+# Configuración del servidor
 SERVIDOR_HOST = os.getenv("SERVIDOR_HOST", "127.0.0.1")
 SERVIDOR_PORT = int(os.getenv("SERVIDOR_PORT", 1608))
 DIRECTORIO_BASE = os.getenv("SERVIDOR_DIR", "archivos_servidor")
 
-# 📝 Configuración de logging
-# Asegurar que el directorio historyLogs exista
+# Configuración de logging
 log_dir = os.path.join(os.path.dirname(os.path.dirname(__file__)), "historyLogs")
 if not os.path.exists(log_dir):
     os.makedirs(log_dir)
@@ -57,14 +42,7 @@ logging.basicConfig(
 )
 
 def manejar_cliente(conexion_ssl, direccion, directorio):
-    """
-    🧑‍💻 Maneja la conexión con un cliente, incluyendo autenticación y procesamiento de comandos.
-
-    Args:
-        conexion_ssl (ssl.SSLSocket): Conexión SSL con el cliente
-        direccion (tuple): Dirección IP y puerto del cliente
-        directorio (str): Directorio base para operaciones con archivos
-    """
+    """🧑‍💻 Maneja conexión, autenticación y comandos de un cliente"""
     try:
         # 👋 Enviar mensaje de bienvenida
         _enviar_mensaje(conexion_ssl, "🌍 Bienvenido al servidor de archivos seguro.\n")
@@ -82,25 +60,17 @@ def manejar_cliente(conexion_ssl, direccion, directorio):
         logging.info(f"🔌 Cliente {direccion} desconectado")
 
 def _enviar_mensaje(conexion, mensaje):
-    """Envía un mensaje al cliente."""
+    """Envía mensaje al cliente"""
     conexion.sendall(mensaje.encode('utf-8'))
 
 def _recibir_mensaje(conexion, prompt=None):
-    """Recibe un mensaje del cliente, opcionalmente mostrando un prompt."""
+    """Recibe mensaje del cliente, opcionalmente con prompt"""
     if prompt:
         _enviar_mensaje(conexion, prompt)
     return conexion.recv(1024).decode().strip()
 
 def _autenticar_usuario(conexion):
-    """
-    🔑 Maneja el proceso de autenticación o registro de usuarios.
-
-    Args:
-        conexion (ssl.SSLSocket): Conexión SSL con el cliente
-
-    Returns:
-        tuple: ID del usuario y sus permisos
-    """
+    """🔑 Maneja autenticación o registro. Retorna (usuario_id, permisos)"""
     while True:
         usuario = _recibir_mensaje(conexion, "👤 Usuario: ")
 
@@ -122,13 +92,7 @@ def _autenticar_usuario(conexion):
         return usuario_id, permisos
 
 def _manejar_registro(conexion, comando_registro):
-    """
-    📝 Procesa un comando de registro de nuevo usuario.
-
-    Args:
-        conexion (ssl.SSLSocket): Conexión SSL con el cliente
-        comando_registro (str): Comando de registro recibido
-    """
+    """📝 Procesa comando de registro de nuevo usuario"""
     partes = comando_registro.split()
     if len(partes) != 3:
         _enviar_mensaje(conexion, "❌ Formato incorrecto. Usa: REGISTRAR usuario contraseña\n")
@@ -142,14 +106,7 @@ def _manejar_registro(conexion, comando_registro):
         _enviar_mensaje(conexion, "👤 Ahora inicia sesión con tu nuevo usuario.\n")
 
 def _procesar_comandos(conexion, directorio, usuario_id):
-    """
-    💻 Procesa los comandos enviados por el usuario.
-
-    Args:
-        conexion (ssl.SSLSocket): Conexión SSL con el cliente
-        directorio (str): Directorio base para operaciones con archivos
-        usuario_id (int): ID del usuario autenticado
-    """
+    """💻 Procesa comandos del usuario autenticado"""
     while True:
         comando = _recibir_mensaje(conexion, "\n💻 Ingresar comando ('SALIR' para desconectar): ")
 
@@ -162,14 +119,7 @@ def _procesar_comandos(conexion, directorio, usuario_id):
 
 
 def iniciar_servidor(host=SERVIDOR_HOST, port=SERVIDOR_PORT, directorio=DIRECTORIO_BASE):
-    """
-    🚀 Inicia el servidor de archivos seguro.
-
-    Args:
-        host (str): Dirección IP donde escuchar conexiones
-        port (int): Puerto donde escuchar conexiones
-        directorio (str): Directorio base para almacenar archivos
-    """
+    """🚀 Inicia el servidor en host:port usando el directorio especificado"""
     # Asegurar que el directorio existe
     if not os.path.exists(directorio):
         os.makedirs(directorio)
@@ -223,7 +173,7 @@ def iniciar_servidor(host=SERVIDOR_HOST, port=SERVIDOR_PORT, directorio=DIRECTOR
             servidor.close()
 
 def _configurar_argumentos():
-    """📋 Configura y parsea los argumentos de línea de comandos."""
+    """📋 Configura argumentos de línea de comandos"""
     parser = argparse.ArgumentParser(
         description='🔐 Servidor de Archivos Seguro',
         formatter_class=argparse.ArgumentDefaultsHelpFormatter
