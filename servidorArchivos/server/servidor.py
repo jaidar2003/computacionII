@@ -114,7 +114,13 @@ def _procesar_comandos(conexion, directorio, usuario_id):
             _enviar_mensaje(conexion, "🔌 Desconectando...\n")
             break
 
-        respuesta = manejar_comando(comando, directorio, usuario_id)
+        # Verificar si es un comando de descarga para pasar la conexión
+        partes = comando.strip().split()
+        if partes and partes[0].upper() == "DESCARGAR":
+            respuesta = manejar_comando(comando, directorio, usuario_id, conexion)
+        else:
+            respuesta = manejar_comando(comando, directorio, usuario_id)
+
         _enviar_mensaje(conexion, f"📄 {respuesta}\n")
 
 

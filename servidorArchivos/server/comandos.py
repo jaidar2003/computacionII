@@ -88,6 +88,12 @@ def _cmd_verificar(partes, directorio_base, usuario_id=None):
     nombre_archivo = partes[1]
     return verificar_estado_archivo(directorio_base, nombre_archivo)
 
+@validar_argumentos(num_args=1, 
+                   mensaje_error="❌ Formato incorrecto. Usa: DESCARGAR nombre_archivo")
+def _cmd_descargar(partes, directorio_base, usuario_id=None, conexion=None):
+    """Maneja comando DESCARGAR para enviar archivos al cliente"""
+    return descargar_archivo(directorio_base, partes[1], conexion)
+
 COMANDOS = {
     "LISTAR": _cmd_listar,
     "CREAR": _cmd_crear,
@@ -97,9 +103,11 @@ COMANDOS = {
     "APROBAR_PERMISOS": _cmd_aprobar_permisos,
     "VER_SOLICITUDES": _cmd_ver_solicitudes,
     "VERIFICAR": _cmd_verificar,
+    "DESCARGAR": _cmd_descargar,
+    "SUBIR": _cmd_crear,  # SUBIR es un alias para CREAR con contenido
 }
 
-def manejar_comando(comando, directorio_base, usuario_id=None):
+def manejar_comando(comando, directorio_base, usuario_id=None, conexion=None):
     """
     🎮 Procesa un comando enviado por el usuario.
 
@@ -107,6 +115,7 @@ def manejar_comando(comando, directorio_base, usuario_id=None):
         comando (str): Comando a ejecutar
         directorio_base (str): Directorio base para operaciones con archivos
         usuario_id (int, optional): ID del usuario que ejecuta el comando
+        conexion (ssl.SSLSocket, optional): Conexión SSL con el cliente para comandos que requieren transferencia
 
     Returns:
         str: Resultado de la ejecución del comando
@@ -121,7 +130,11 @@ def manejar_comando(comando, directorio_base, usuario_id=None):
     manejador = COMANDOS.get(accion)
 
     if manejador:
-        return manejador(partes, directorio_base, usuario_id)
+        # Pasar la conexión solo para comandos que la necesitan (DESCARGAR, SUBIR)
+        if accion in ["DESCARGAR", "SUBIR"]:
+            return manejador(partes, directorio_base, usuario_id, conexion)
+        else:
+            return manejador(partes, directorio_base, usuario_id)
     else:
         return "❌ Comando no reconocido. Usa LISTAR para ver los archivos disponibles."
 
@@ -306,6 +319,77 @@ def _iniciar_verificacion(ruta, hash_esperado=None):
         hash_esperado (str, optional): Hash SHA-256 esperado para verificación
     """
     verificar_integridad_y_virus.delay(ruta, hash_esperado)
+
+def descargar_archivo(directorio_base, nombre_archivo, conexion=None):
+    """
+    📥 Envía un archivo del servidor al cliente.
+
+    Args:
+        directorio_base (str): Ruta al directorio donde se almacenan los archivos
+        nombre_archivo (str): Nombre del archivo a descargar
+        conexion (ssl.SSLSocket, optional): Conexión SSL con el cliente para enviar contenido
+
+    Returns:
+        str: Mensaje de éxito o error
+    """
+    try:
+        # Validar nombre de archivo
+        if not _es_nombre_archivo_valido(nombre_archivo):
+            return "❌ Nombre de archivo inválido. No debe contener caracteres especiales."
+
+        # Construir ruta completa
+        ruta = os.path.join(directorio_base, nombre_archivo)
+
+        # Verificar si existe
+        if not os.path.exists(ruta):
+            return f"⚠️ Archivo '{nombre_archivo}' no encontrado."
+
+        # Si no tenemos conexión, no podemos enviar el archivo
+        if not conexion:
+            return f"⚠️ No se puede descargar '{nombre_archivo}'. Conexión no disponible."
+
+        try:
+            # Obtener tamaño del archivo
+            file_size = os.path.getsize(ruta)
+
+            # Enviar mensaje de aceptación con el tamaño
+            conexion.sendall(f"✅ Listo para enviar '{nombre_archivo}' ({file_size} bytes)\n".encode('utf-8'))
+
+            # Esperar confirmación del cliente
+            respuesta = conexion.recv(1024).decode().strip()
+            if respuesta.upper() != "LISTO":
+                return f"❌ Cliente no está listo para recibir el archivo."
+
+            # Enviar el archivo en chunks
+            with open(ruta, 'rb') as f:
+                bytes_enviados = 0
+                chunk_size = 8192  # 8KB chunks
+                while bytes_enviados < file_size:
+                    chunk = f.read(chunk_size)
+                    if not chunk:
+                        break
+                    conexion.sendall(chunk)
+                    bytes_enviados += len(chunk)
+
+            # Esperar confirmación final del cliente
+            try:
+                confirmacion = conexion.recv(1024).decode().strip()
+                if "✅" in confirmacion:
+                    return f"✅ Archivo '{nombre_archivo}' enviado correctamente ({bytes_enviados} bytes)"
+                else:
+                    return f"⚠️ Cliente reportó un problema: {confirmacion}"
+            except socket.timeout:
+                return f"⚠️ No se recibió confirmación del cliente, pero el archivo podría haberse enviado correctamente."
+
+        except socket.timeout:
+            return f"❌ Error: Tiempo de espera agotado durante la transferencia."
+        except ConnectionError as e:
+            return f"❌ Error de conexión durante la transferencia: {e}"
+        except Exception as e:
+            return f"❌ Error inesperado durante la transferencia: {e}"
+
+    except Exception as error:
+        return f"❌ Error al descargar archivo: {error}"
 
 def verificar_estado_archivo(directorio_base, nombre_archivo):
     """

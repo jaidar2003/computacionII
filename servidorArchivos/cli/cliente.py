@@ -288,11 +288,16 @@ def _procesar_comandos(conexion):
         comando = input(prompt)
 
         # Procesar comando especial CREAR para añadir hash y enviar contenido
-        if comando.upper().startswith("CREAR "):
+        if comando.upper().startswith("CREAR ") or comando.upper().startswith("SUBIR "):
             comando = _procesar_comando_crear(comando, conexion)
             # Si el comando es None, ya se manejó la respuesta
             if comando is None:
                 continue
+
+        # Procesar comando especial DESCARGAR para recibir archivos
+        elif comando.upper().startswith("DESCARGAR "):
+            _procesar_comando_descargar(comando, conexion)
+            continue
 
         # Enviar comando al servidor
         _enviar_mensaje(conexion, comando)
@@ -347,6 +352,101 @@ def _verificar_estado_archivo(conexion, nombre_archivo, max_intentos=3, espera_e
     # Si llegamos aquí, no se pudo obtener la verificación después de varios intentos
     print(MENSAJE_VERIFICACION_PENDIENTE.format(archivo=nombre_archivo))
     return False
+
+def _procesar_comando_descargar(comando, conexion):
+    """📥 Procesa comando DESCARGAR, recibe archivo del servidor y lo guarda localmente"""
+    partes = comando.split()
+    if len(partes) < 2:
+        print(f"{ANSI_ROJO}❌ Formato incorrecto. Uso: DESCARGAR nombre_archivo{ANSI_RESET}")
+        return
+
+    nombre_archivo = partes[1]
+
+    # Preguntar dónde guardar el archivo
+    ruta_destino = input(f"Ruta local donde guardar '{nombre_archivo}' (Enter para usar el nombre original): ")
+    if not ruta_destino:
+        ruta_destino = nombre_archivo
+
+    # Enviar comando al servidor
+    _enviar_mensaje(conexion, comando)
+
+    # Recibir respuesta inicial del servidor
+    respuesta = conexion.recv(BUFFER_SIZE).decode('utf-8')
+    print(respuesta)
+
+    # Verificar si el servidor está listo para enviar
+    if "✅ Listo para enviar" not in respuesta:
+        return
+
+    # Extraer tamaño del archivo de la respuesta
+    try:
+        import re
+        match = re.search(r'\((\d+) bytes\)', respuesta)
+        if match:
+            file_size = int(match.group(1))
+        else:
+            file_size = 0
+            print(f"{ANSI_AMARILLO}⚠️ No se pudo determinar el tamaño del archivo.{ANSI_RESET}")
+    except Exception as e:
+        file_size = 0
+        print(f"{ANSI_AMARILLO}⚠️ Error al procesar tamaño: {e}{ANSI_RESET}")
+
+    # Confirmar que estamos listos para recibir
+    _enviar_mensaje(conexion, "LISTO")
+
+    print(f"{ANSI_AMARILLO}📥 Recibiendo archivo '{nombre_archivo}'...{ANSI_RESET}")
+
+    try:
+        # Recibir y guardar el archivo
+        with open(ruta_destino, 'wb') as f:
+            bytes_recibidos = 0
+            chunk_size = 8192  # 8KB chunks
+
+            while bytes_recibidos < file_size:
+                # Calcular tamaño del chunk a recibir
+                bytes_restantes = file_size - bytes_recibidos
+                chunk_actual = min(chunk_size, bytes_restantes)
+
+                # Recibir chunk
+                chunk = conexion.recv(chunk_actual)
+                if not chunk:  # Conexión cerrada por el servidor
+                    raise ConnectionError("Conexión cerrada por el servidor durante la transferencia")
+
+                # Escribir chunk y actualizar contador
+                f.write(chunk)
+                bytes_recibidos += len(chunk)
+
+                # Mostrar progreso
+                if file_size > 0:
+                    porcentaje = int(bytes_recibidos * 100 / file_size)
+                    print(f"\r📥 Recibiendo: {bytes_recibidos}/{file_size} bytes ({porcentaje}%)", end="")
+                else:
+                    print(f"\r📥 Recibiendo: {bytes_recibidos} bytes", end="")
+
+            print("\n✅ Descarga completada.")
+
+        # Enviar confirmación al servidor
+        _enviar_mensaje(conexion, "✅ Archivo recibido correctamente")
+
+    except socket.timeout:
+        print(f"\n{ANSI_ROJO}❌ Error: Tiempo de espera agotado durante la transferencia.{ANSI_RESET}")
+        _enviar_mensaje(conexion, "❌ Error: Tiempo de espera agotado")
+        # Eliminar archivo parcial
+        if os.path.exists(ruta_destino):
+            os.remove(ruta_destino)
+
+    except ConnectionError as e:
+        print(f"\n{ANSI_ROJO}❌ Error de conexión durante la transferencia: {e}{ANSI_RESET}")
+        # Eliminar archivo parcial
+        if os.path.exists(ruta_destino):
+            os.remove(ruta_destino)
+
+    except Exception as e:
+        print(f"\n{ANSI_ROJO}❌ Error inesperado durante la transferencia: {e}{ANSI_RESET}")
+        _enviar_mensaje(conexion, f"❌ Error: {str(e)}")
+        # Eliminar archivo parcial
+        if os.path.exists(ruta_destino):
+            os.remove(ruta_destino)
 
 def _procesar_comando_crear(comando, conexion):
     """📄 Procesa comando CREAR, añade hash y envía contenido. Retorna comando modificado o None"""

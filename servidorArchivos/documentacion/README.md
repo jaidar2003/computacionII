@@ -118,6 +118,8 @@ celery -A tareas.celery_app worker --loglevel=info
 | ------------------------- | ------------------------------------------------- |
 | `LISTAR`                  | Muestra los archivos en el servidor.              |
 | `CREAR nombre`            | Crea un archivo vacío con el nombre especificado. |
+| `SUBIR nombre`            | Sube un archivo local al servidor.                |
+| `DESCARGAR nombre`        | Descarga un archivo del servidor.                 |
 | `ELIMINAR nombre`         | Elimina un archivo del servidor.                  |
 | `RENOMBRAR antiguo nuevo` | Cambia el nombre de un archivo.                   |
 | `SALIR`                   | Cierra la conexión con el servidor.               |
@@ -175,7 +177,7 @@ servidorArchivos/
 ## 🚀 Mejoras Futuras
 
 * [ ] Implementar una **interfaz gráfica (GUI)** para el cliente.
-* [ ] Soporte para **subida y descarga de archivos**.
+* [x] Soporte para **subida y descarga de archivos**.
 * [ ] Integrar logging Celery en la misma base.
 * [ ] Alertas automáticas si un archivo es infectado.
 * [ ] Logs exportables (CSV, JSON).
