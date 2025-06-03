@@ -63,12 +63,24 @@ Se implementó SSL/TLS para cifrar las comunicaciones entre cliente y servidor p
 - **Integridad**: Garantiza que los datos no sean alterados durante la transmisión.
 - **Autenticación**: Verifica la identidad del servidor.
 
+El sistema utiliza certificados autofirmados generados con OpenSSL. El proceso de creación de certificados requiere dos pasos principales:
+
+1. Generación de la clave privada
+2. Creación del certificado utilizando la clave privada
+
+Además, se implementó un sistema de verificación de certificados en el cliente que:
+- Comprueba la existencia del certificado del servidor
+- Verifica la fecha de expiración del certificado
+- Alerta al usuario cuando el certificado está próximo a expirar
+- Permite al usuario decidir si continuar con una conexión no verificada
+
 #### Hashing de Contraseñas
 
-Se utilizó SHA-256 para almacenar las contraseñas de los usuarios por:
+Se actualizó el sistema para utilizar bcrypt en lugar de SHA-256 para almacenar las contraseñas de los usuarios por:
 
-- **Seguridad**: Evita almacenar contraseñas en texto plano.
-- **Rendimiento**: Ofrece un buen equilibrio entre seguridad y velocidad.
+- **Seguridad mejorada**: Bcrypt es resistente a ataques de fuerza bruta mediante hardware especializado.
+- **Salt integrado**: Incluye automáticamente un salt único para cada contraseña.
+- **Factor de trabajo configurable**: Permite ajustar la complejidad del hash según las necesidades de seguridad.
 
 ### 7. Interfaz de Línea de Comandos
 

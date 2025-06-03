@@ -23,8 +23,8 @@ Este proyecto implementa un **servidor seguro** para la gestión remota de archi
 ### 1️⃣ **Clonar el repositorio**
 
 ```bash
- git clone https://github.com/jaidar2003/computacionII.git
- cd computacionII/proyecto/servidorArchivos
+git clone https://github.com/jaidar2003/computacionII.git
+cd computacionII
 ```
 
 ### 2️⃣ **Instalar dependencias**
@@ -33,29 +33,52 @@ Este proyecto implementa un **servidor seguro** para la gestión remota de archi
 pip install -r requirements.txt
 ```
 
+Para instrucciones detalladas de instalación, incluyendo la configuración de Redis para Celery y otras opciones, consulta el archivo INSTALL.md en la carpeta de documentación.
+
 ### 3️⃣ **Generar Certificados SSL**
 
+La creación de certificados SSL requiere dos pasos principales:
+
 ```bash
-mkdir certificados
-openssl req -x509 -newkey rsa:4096 -keyout certificados/llave.pem -out certificados/certificado.pem -days 365 -nodes
+# Crear directorio para certificados
+mkdir -p certificados
+
+# 1. Generar la clave privada
+openssl genrsa -out certificados/clave_privada.key 2048
+
+# 2. Generar el certificado autofirmado
+openssl req -x509 -new -nodes -key certificados/clave_privada.key -sha256 -days 365 -out certificados/certificado.pem
 ```
+
+Para más detalles y opciones, consulta el archivo INSTALL.md en la carpeta de documentación.
 
 ### 4️⃣ **Ejecutar el Servidor**
 
 ```bash
-python servidor.py
+python servidorArchivos/main.py
+```
+
+Para opciones adicionales:
+```bash
+python servidorArchivos/main.py -p 5000 -H 127.0.0.1 -d archivos_servidor -v
 ```
 
 ### 5️⃣ **Ejecutar el Cliente**
 
 ```bash
-python cliente.py
+python servidorArchivos/cli/cliente.py
+```
+
+Para opciones adicionales:
+```bash
+python servidorArchivos/cli/cliente.py -s 127.0.0.1 -p 5000
 ```
 
 ### 6️⃣ **Ejecutar el Worker de Celery**
 
 ```bash
-celery -A servidor.tareas worker --loglevel=info
+cd servidorArchivos
+celery -A tareas.celery_app worker --loglevel=info
 ```
 
 ---
@@ -65,26 +88,26 @@ celery -A servidor.tareas worker --loglevel=info
 ```
 ┌───────────────────┐      SSL/TLS      ┌───────────────────┐
 │     Cliente       │  ◀──────────────▶ │     Servidor      │
-│  (cliente.py)     │                   │  (servidor.py)    │
+│  (cli/cliente.py) │                   │     (main.py)     │
 └───────────────────┘                   └───────────────────┘
-                                                 │
-                                                 ▼
-                                      ┌────────────────────────┐
-                                      │  Sistema de Archivos   │
-                                      │  (archivos_servidor/)  │
-                                      └────────────────────────┘
-                                                 │
-                                                 ▼
-                                      ┌────────────────────────┐
-                                      │ Verificación Celery    │
-                                      │ (integridad y virus)   │
-                                      └────────────────────────┘
-                                                 │
-                                                 ▼
-                                      ┌────────────────────────┐
-                                      │ Registro de Actividad  │
-                                      │   (archivo + BD)       │
-                                      └────────────────────────┘
+                                                │
+                                                ▼
+                                     ┌────────────────────────┐
+                                     │  Sistema de Archivos   │
+                                     │  (archivos_servidor/)  │
+                                     └────────────────────────┘
+                                                │
+                                                ▼
+                                     ┌────────────────────────┐
+                                     │ Verificación Celery    │
+                                     │ (integridad y virus)   │
+                                     └────────────────────────┘
+                                                │
+                                                ▼
+                                     ┌────────────────────────┐
+                                     │ Registro de Actividad  │
+                                     │ (historyLogs + BD)     │
+                                     └────────────────────────┘
 ```
 
 ---
@@ -104,7 +127,9 @@ celery -A servidor.tareas worker --loglevel=info
 ## 🔒 Seguridad Implementada
 
 ✔️ **Autenticación de usuarios**: Verificación con credenciales antes de ejecutar comandos.
+✔️ **Hashing seguro de contraseñas**: Uso de bcrypt para almacenar contraseñas de forma segura.
 ✔️ **SSL/TLS**: Toda la comunicación entre cliente y servidor está cifrada.
+✔️ **Verificación de certificados**: Comprobación de validez y fecha de expiración de certificados SSL.
 ✔️ **Verificación de archivos con Celery**: integridad (hash) + escaneo antivirus (ClamAV).
 ✔️ **Logging de eventos**: Se registra en archivo `.log` y en tabla `log_eventos`.
 ✔️ **Aislamiento de usuarios**: Cada cliente tiene su propio contexto de ejecución.
@@ -115,20 +140,34 @@ celery -A servidor.tareas worker --loglevel=info
 
 ```
 servidorArchivos/
-├── cliente.py       # Cliente que se conecta al servidor
-├── servidor.py      # Servidor que maneja clientes y comandos
-├── comandos.py      # Funciones para gestionar archivos
-├── seguridad.py     # Módulo de autenticación y configuración SSL
-├── tareas.py        # Tareas Celery (escaneo antivirus e integridad)
-├── main.py          # Punto de entrada principal del servidor
-├── proyecto.txt     # Documentación del proyecto
-├── celeryconfig.py  # Configuración de Celery
-├── worker.py        # Inicializador del worker Celery
-├── servidor.log     # Archivo de log para registrar actividad
+├── archivos_servidor/  # Directorio para almacenar archivos de usuarios
 ├── base_datos/
-│   ├── db.py        # Lógica de usuarios y logging (BD)
+│   ├── db.py           # Lógica de usuarios y logging (BD)
 │   └── servidor_archivos.db
-└── certificados/    # Archivos SSL (cert.pem, key.pem)
+├── certificados/       # Archivos SSL (certificado.pem, clave_privada.key)
+├── cli/
+│   ├── cliente.py      # Cliente que se conecta al servidor
+│   ├── estilos.py      # Estilos para la interfaz de línea de comandos
+│   ├── interface.py    # Funciones para la interfaz de usuario
+│   ├── mensajes.py     # Mensajes del cliente
+│   └── utils.py        # Utilidades para el cliente
+├── documentacion/      # Documentación del proyecto
+│   ├── INFO.md         # Informe técnico
+│   ├── INSTALL.md      # Instrucciones de instalación
+│   ├── README.md       # Documentación general
+│   └── TODO.md         # Lista de mejoras futuras
+├── historyLogs/        # Archivos de registro
+│   ├── cliente.log     # Registro de actividad del cliente
+│   └── servidor.log    # Registro de actividad del servidor
+├── server/
+│   ├── comandos.py     # Funciones para gestionar archivos
+│   └── seguridad.py    # Módulo de autenticación y configuración SSL
+├── tareas/
+│   ├── celeryconfig.py # Configuración de Celery
+│   ├── tareas.py       # Tareas Celery (escaneo antivirus e integridad)
+│   └── worker.py       # Inicializador del worker Celery
+├── test/               # Pruebas automatizadas
+└── main.py             # Punto de entrada principal del servidor
 ```
 
 ---
@@ -140,6 +179,10 @@ servidorArchivos/
 * [ ] Integrar logging Celery en la misma base.
 * [ ] Alertas automáticas si un archivo es infectado.
 * [ ] Logs exportables (CSV, JSON).
+* [ ] Implementar **autenticación de dos factores (2FA)** para mayor seguridad.
+* [ ] Integrar con **proveedores de identidad externos** mediante OAuth/OpenID.
+
+Para una lista completa de mejoras planificadas, consulta el archivo TODO.md en la carpeta de documentación.
 
 ---
 

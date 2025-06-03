@@ -27,14 +27,54 @@ pip install -r requirements.txt
 
 ### 3. Configurar Certificados SSL
 
-Para la comunicación segura, el servidor necesita certificados SSL. Puedes generar certificados autofirmados con el siguiente comando:
+Para la comunicación segura, el servidor necesita certificados SSL. La creación de certificados SSL es un proceso de múltiples pasos:
+
+#### Método Manual (Recomendado para Entornos de Desarrollo)
 
 ```bash
+# Crear directorio para certificados si no existe
 mkdir -p servidorArchivos/certificados
 cd servidorArchivos/certificados
-openssl req -x509 -newkey rsa:4096 -keyout llave.pem -out certificado.pem -days 365 -nodes
+
+# 1. Generar la clave privada
+openssl genrsa -out clave_privada.key 2048
+
+# 2. Generar el certificado autofirmado usando la clave privada
+openssl req -x509 -new -nodes -key clave_privada.key -sha256 -days 365 -out certificado.pem
+
+# Volver al directorio principal
 cd ../..
 ```
+
+Durante el proceso de generación del certificado, se te pedirá información como país, estado, organización, etc. Puedes completarla o simplemente presionar Enter para usar valores predeterminados.
+
+#### Método Alternativo: Script de Automatización
+
+También puedes crear un script bash para automatizar el proceso:
+
+```bash
+# Crear archivo crear_certificado.sh
+cat > crear_certificado.sh << 'EOF'
+#!/bin/bash
+
+# Crear directorio si no existe
+mkdir -p servidorArchivos/certificados
+
+# Generar clave privada y certificado
+openssl genrsa -out servidorArchivos/certificados/clave_privada.key 2048
+openssl req -x509 -new -nodes -key servidorArchivos/certificados/clave_privada.key -sha256 -days 365 -out servidorArchivos/certificados/certificado.pem -subj "/C=ES/ST=Estado/L=Ciudad/O=Organización/OU=Unidad/CN=ejemplo.com"
+
+echo "✅ Certificado y clave privada creados con éxito"
+EOF
+
+# Hacer el script ejecutable
+chmod +x crear_certificado.sh
+
+# Ejecutar el script
+./crear_certificado.sh
+```
+
+Este script crea automáticamente tanto la clave privada como el certificado con valores predeterminados para los campos requeridos.
 
 ### 4. Iniciar Redis (para Celery)
 

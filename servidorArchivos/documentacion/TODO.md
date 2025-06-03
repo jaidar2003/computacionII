@@ -39,6 +39,8 @@ Este documento detalla las posibles mejoras y características que se podrían i
 - [ ] **Detección de malware**: Escanear archivos en busca de malware.
 - [ ] **Auditoría de seguridad**: Implementar un sistema completo de auditoría.
 - [ ] **Limitación de tasa**: Proteger contra ataques de fuerza bruta y DoS.
+- [x] **Verificación de certificados SSL**: Implementar verificación de validez y expiración de certificados.
+- [x] **Hashing seguro de contraseñas**: Actualizar de SHA-256 a bcrypt para mayor seguridad.
 
 ## Mejoras de Interfaz
 
