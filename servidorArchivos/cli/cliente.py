@@ -214,9 +214,9 @@ def _establecer_conexion_ssl(host, port, verificar_cert=True):
 
 def _recibir_mensajes_bienvenida(conexion):
     # 👋 Recibe y muestra mensajes de bienvenida
-    for _ in range(2):  # El servidor envía dos mensajes
-        mensaje = conexion.recv(BUFFER_SIZE).decode('utf-8')
-        print(ANSI_VERDE + mensaje + ANSI_RESET)
+    # El servidor envía un mensaje de bienvenida
+    mensaje = conexion.recv(BUFFER_SIZE).decode('utf-8')
+    print(ANSI_VERDE + mensaje + ANSI_RESET)
 
 def _manejar_autenticacion(conexion):
     # 🔑 Maneja autenticación o registro. Retorna True si exitoso
@@ -246,6 +246,9 @@ def _manejar_autenticacion(conexion):
 
 def _iniciar_sesion(conexion):
     # 🔑 Inicia sesión. Retorna True si exitoso
+    # Recibir prompt de usuario del servidor y descartarlo
+    conexion.recv(BUFFER_SIZE)  # Descartar el prompt "Usuario: " del servidor
+
     # Solicitar credenciales
     usuario = input("Usuario: ")
     _enviar_mensaje(conexion, f"{usuario}")

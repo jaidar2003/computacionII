@@ -7,6 +7,11 @@ import sys
 import socket
 from functools import wraps
 
+def _enviar_mensaje(conexion, mensaje):
+    """Envía mensaje al cliente"""
+    if conexion:
+        conexion.sendall(mensaje.encode('utf-8'))
+
 # Configuración básica
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
 
@@ -42,12 +47,12 @@ def _cmd_listar(partes, directorio_base, usuario_id=None):
 
 @validar_argumentos(min_args=1, max_args=2, 
                    mensaje_error="❌ Formato incorrecto. Usa: CREAR nombre_archivo [hash]")
-def _cmd_crear(partes, directorio_base, usuario_id=None):
+def _cmd_crear(partes, directorio_base, usuario_id=None, conexion=None):
     """Maneja comando CREAR"""
     if len(partes) == 2:
-        return crear_archivo(directorio_base, partes[1])
+        return crear_archivo(directorio_base, partes[1], None, conexion)
     else:  # len(partes) == 3
-        return crear_archivo(directorio_base, partes[1], partes[2])
+        return crear_archivo(directorio_base, partes[1], partes[2], conexion)
 
 @validar_argumentos(num_args=1, 
                    mensaje_error="❌ Formato incorrecto. Usa: ELIMINAR nombre_archivo")

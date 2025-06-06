@@ -114,9 +114,9 @@ def _procesar_comandos(conexion, directorio, usuario_id):
             _enviar_mensaje(conexion, "🔌 Desconectando...\n")
             break
 
-        # Verificar si es un comando de descarga para pasar la conexión
+        # Verificar si es un comando que requiere conexión
         partes = comando.strip().split()
-        if partes and partes[0].upper() == "DESCARGAR":
+        if partes and partes[0].upper() in ["DESCARGAR", "SUBIR"]:
             respuesta = manejar_comando(comando, directorio, usuario_id, conexion)
         else:
             respuesta = manejar_comando(comando, directorio, usuario_id)
@@ -132,10 +132,13 @@ def iniciar_servidor(host=SERVIDOR_HOST, port=SERVIDOR_PORT, directorio=DIRECTOR
         logging.info(f"📁 Directorio creado: {directorio}")
 
     try:
-        # Configurar socket
-        servidor = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+        # Configurar socket para soportar IPv4 e IPv6
+        addr_info = socket.getaddrinfo(host, port, socket.AF_UNSPEC, socket.SOCK_STREAM)
+        family, socktype, proto, canonname, sockaddr = addr_info[0]
+
+        servidor = socket.socket(family, socktype, proto)
         servidor.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
-        servidor.bind((host, port))
+        servidor.bind(sockaddr)
         servidor.listen(5)
 
         logging.info(f"✅ Servidor iniciado en {host}:{port}")
