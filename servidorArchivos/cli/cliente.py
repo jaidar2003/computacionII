@@ -186,8 +186,8 @@ def _establecer_conexion_ssl(host, port, verificar_cert=True):
     try:
         # Establecer conexión
         sock = socket.create_connection((host, port))
-        # Configurar timeout para operaciones de socket (30 segundos)
-        sock.settimeout(30)
+        # Configurar timeout para operaciones de socket (120 segundos)
+        sock.settimeout(120)
         conexion_ssl = contexto.wrap_socket(sock, server_hostname=host)
 
         # Verificar y mostrar información del certificado
@@ -357,7 +357,7 @@ def _verificar_estado_archivo(conexion, nombre_archivo, max_intentos=3, espera_e
     return False
 
 def _procesar_comando_descargar(comando, conexion):
-    """📥 Procesa comando DESCARGAR, recibe archivo del servidor y lo guarda localmente"""
+    # 📥 Procesa comando DESCARGAR, recibe archivo del servidor y lo guarda localmente
     partes = comando.split()
     if len(partes) < 2:
         print(f"{ANSI_ROJO}❌ Formato incorrecto. Uso: DESCARGAR nombre_archivo{ANSI_RESET}")
@@ -369,6 +369,22 @@ def _procesar_comando_descargar(comando, conexion):
     ruta_destino = input(f"Ruta local donde guardar '{nombre_archivo}' (Enter para usar el nombre original): ")
     if not ruta_destino:
         ruta_destino = nombre_archivo
+
+    # Verificar si la ruta destino es un directorio
+    if os.path.isdir(ruta_destino):
+        # Si es un directorio, añadir el nombre del archivo al final
+        ruta_destino = os.path.join(ruta_destino, nombre_archivo)
+        print(f"{ANSI_AMARILLO}ℹ️ Guardando en: {ruta_destino}{ANSI_RESET}")
+
+    # Asegurar que el directorio padre existe
+    directorio_padre = os.path.dirname(ruta_destino)
+    if directorio_padre and not os.path.exists(directorio_padre):
+        try:
+            os.makedirs(directorio_padre)
+            print(f"{ANSI_VERDE}✅ Directorio creado: {directorio_padre}{ANSI_RESET}")
+        except Exception as e:
+            print(f"{ANSI_ROJO}❌ No se pudo crear el directorio: {e}{ANSI_RESET}")
+            return
 
     # Enviar comando al servidor
     _enviar_mensaje(conexion, comando)
@@ -452,7 +468,7 @@ def _procesar_comando_descargar(comando, conexion):
             os.remove(ruta_destino)
 
 def _procesar_comando_crear(comando, conexion):
-    """📄 Procesa comando CREAR, añade hash y envía contenido. Retorna comando modificado o None"""
+    # 📄 Procesa comando CREAR, añade hash y envía contenido. Retorna comando modificado o None
     partes = comando.split()
     if len(partes) == 2:
         archivo_local = input("Ruta al archivo local: ")

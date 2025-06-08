@@ -57,7 +57,10 @@ class TestServidor(unittest.TestCase):
     @patch('ssl.create_default_context')
     @patch('socket.getaddrinfo')
     def test_iniciar_servidor(self, mock_getaddrinfo, mock_ssl_context, mock_socket):
-        mock_getaddrinfo.return_value = [(socket.AF_INET, socket.SOCK_STREAM, 0, '', ('127.0.0.1', 5050))]
+        # Mock para simplificar el test usando solo IPv4
+        # Nota: La implementación real en server/servidor.py soporta tanto IPv4 como IPv6 usando socket.AF_UNSPEC
+        mock_sockaddr = ('127.0.0.1', 5050)
+        mock_getaddrinfo.return_value = [(socket.AF_INET, socket.SOCK_STREAM, 0, '', mock_sockaddr)]
         mock_context = MagicMock()
         mock_ssl_context.return_value = mock_context
         mock_sock = MagicMock()
@@ -72,7 +75,7 @@ class TestServidor(unittest.TestCase):
                     iniciar_servidor('127.0.0.1', 5050, self.directorio_base)
                 except Exception as e:
                     self.assertEqual(str(e), "Test exception to break the loop")
-                mock_sock.bind.assert_called_once_with(('127.0.0.1', 5050))
+                mock_sock.bind.assert_called_once_with(mock_sockaddr)
                 mock_sock.listen.assert_called_once_with(5)
                 mock_sock.accept.assert_called()
                 mock_ssl_context.assert_called_once_with(ssl.Purpose.CLIENT_AUTH)
