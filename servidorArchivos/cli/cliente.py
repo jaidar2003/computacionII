@@ -417,6 +417,7 @@ def _procesar_comando_descargar(comando, conexion):
 
     try:
         # Recibir y guardar el archivo
+        print(f"[DEBUG] Guardando en: {ruta_destino}")
         with open(ruta_destino, 'wb') as f:
             bytes_recibidos = 0
             chunk_size = 8192  # 8KB chunks
