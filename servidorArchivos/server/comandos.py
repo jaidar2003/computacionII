@@ -99,18 +99,6 @@ COMANDOS = {
 }
 
 def manejar_comando(comando, directorio_base, usuario_id=None, conexion=None):
-    """
-    🎮 Procesa un comando enviado por el usuario.
-
-    Args:
-        comando (str): Comando a ejecutar
-        directorio_base (str): Directorio base para operaciones con archivos
-        usuario_id (int, optional): ID del usuario que ejecuta el comando
-        conexion (ssl.SSLSocket, optional): Conexión SSL con el cliente para comandos que requieren transferencia
-
-    Returns:
-        str: Resultado de la ejecución del comando
-    """
     partes = comando.strip().split()
     if not partes:
         return "❌ Comando vacío."
@@ -130,15 +118,6 @@ def manejar_comando(comando, directorio_base, usuario_id=None, conexion=None):
         return "❌ Comando no reconocido. Usa LISTAR para ver los archivos disponibles."
 
 def listar_archivos(directorio_base):
-    """
-    📋 Lista todos los archivos en el directorio base.
-
-    Args:
-        directorio_base (str): Ruta al directorio donde se almacenan los archivos
-
-    Returns:
-        str: Lista de archivos o mensaje de error
-    """
     try:
         archivos = os.listdir(directorio_base)
         if not archivos:
@@ -151,18 +130,6 @@ def listar_archivos(directorio_base):
         return f"❌ Error al listar archivos: {error}"
 
 def crear_archivo(directorio_base, nombre_archivo, hash_esperado=None, conexion=None):
-    """
-    📝 Crea un nuevo archivo en el servidor.
-
-    Args:
-        directorio_base (str): Ruta al directorio donde se almacenan los archivos
-        nombre_archivo (str): Nombre del archivo a crear
-        hash_esperado (str, optional): Hash SHA-256 esperado para verificación
-        conexion (ssl.SSLSocket, optional): Conexión SSL con el cliente para recibir contenido
-
-    Returns:
-        str: Mensaje de éxito o error
-    """
     try:
         # Validar nombre de archivo
         if not _es_nombre_archivo_valido(nombre_archivo):
@@ -224,16 +191,6 @@ def crear_archivo(directorio_base, nombre_archivo, hash_esperado=None, conexion=
         return f"❌ Error al crear archivo: {error}"
 
 def eliminar_archivo(directorio_base, nombre_archivo):
-    """
-    🗑️ Elimina un archivo del servidor.
-
-    Args:
-        directorio_base (str): Ruta al directorio donde se almacenan los archivos
-        nombre_archivo (str): Nombre del archivo a eliminar
-
-    Returns:
-        str: Mensaje de éxito o error
-    """
     try:
         # Validar nombre de archivo
         if not _es_nombre_archivo_valido(nombre_archivo):
@@ -253,17 +210,6 @@ def eliminar_archivo(directorio_base, nombre_archivo):
         return f"❌ Error al eliminar archivo: {error}"
 
 def renombrar_archivo(directorio_base, nombre_viejo, nombre_nuevo):
-    """
-    ✏️ Cambia el nombre de un archivo en el servidor.
-
-    Args:
-        directorio_base (str): Ruta al directorio donde se almacenan los archivos
-        nombre_viejo (str): Nombre actual del archivo
-        nombre_nuevo (str): Nuevo nombre para el archivo
-
-    Returns:
-        str: Mensaje de éxito o error
-    """
     try:
         # Validar nombres de archivo
         if not _es_nombre_archivo_valido(nombre_viejo) or not _es_nombre_archivo_valido(nombre_nuevo):
@@ -288,41 +234,14 @@ def renombrar_archivo(directorio_base, nombre_viejo, nombre_nuevo):
         return f"❌ Error al renombrar archivo: {error}"
 
 def _es_nombre_archivo_valido(nombre):
-    """
-    Verifica si un nombre de archivo es válido y seguro.
-
-    Args:
-        nombre (str): Nombre de archivo a validar
-
-    Returns:
-        bool: True si es válido, False en caso contrario
-    """
     # Caracteres prohibidos en nombres de archivo
     caracteres_prohibidos = ['/', '\\', ':', '*', '?', '"', '<', '>', '|']
     return not any(c in nombre for c in caracteres_prohibidos)
 
 def _iniciar_verificacion(ruta, hash_esperado=None):
-    """
-    Inicia la verificación de integridad y antivirus en segundo plano.
-
-    Args:
-        ruta (str): Ruta completa al archivo
-        hash_esperado (str, optional): Hash SHA-256 esperado para verificación
-    """
     verificar_integridad_y_virus.delay(ruta, hash_esperado)
 
 def descargar_archivo(directorio_base, nombre_archivo, conexion=None):
-    """
-    📥 Envía un archivo del servidor al cliente.
-
-    Args:
-        directorio_base (str): Ruta al directorio donde se almacenan los archivos
-        nombre_archivo (str): Nombre del archivo a descargar
-        conexion (ssl.SSLSocket, optional): Conexión SSL con el cliente para enviar contenido
-
-    Returns:
-        str: Mensaje de éxito o error
-    """
     try:
         # Validar nombre de archivo
         if not _es_nombre_archivo_valido(nombre_archivo):
@@ -383,16 +302,6 @@ def descargar_archivo(directorio_base, nombre_archivo, conexion=None):
         return f"❌ Error al descargar archivo: {error}"
 
 def verificar_estado_archivo(directorio_base, nombre_archivo):
-    """
-    🔍 Consulta el estado de verificación de un archivo.
-
-    Args:
-        directorio_base (str): Ruta al directorio donde se almacenan los archivos
-        nombre_archivo (str): Nombre del archivo a verificar
-
-    Returns:
-        str: Mensaje con el estado de verificación
-    """
     try:
         # Validar nombre de archivo
         if not _es_nombre_archivo_valido(nombre_archivo):
@@ -426,16 +335,6 @@ def verificar_estado_archivo(directorio_base, nombre_archivo):
         return f"❌ Error al consultar estado: {error}"
 
 def solicitar_cambio_permisos(usuario_id, permiso_solicitado):
-    """
-    🔑 Registra una solicitud de cambio de permisos para un usuario.
-
-    Args:
-        usuario_id (int): ID del usuario que solicita el cambio
-        permiso_solicitado (str): Permiso solicitado ('lectura', 'escritura', 'admin')
-
-    Returns:
-        str: Mensaje indicando el resultado de la operación
-    """
     # 🔍 Validar el permiso solicitado
     permisos_validos = ['lectura', 'escritura', 'admin']
     if permiso_solicitado not in permisos_validos:
@@ -480,16 +379,6 @@ def solicitar_cambio_permisos(usuario_id, permiso_solicitado):
         return f"❌ Error al solicitar cambio de permisos: {error}"
 
 def _obtener_info_usuario(cursor, usuario_id):
-    """
-    👤 Obtiene información de un usuario por su ID.
-
-    Args:
-        cursor (sqlite3.Cursor): Cursor de la base de datos
-        usuario_id (int): ID del usuario
-
-    Returns:
-        tuple: (username, permisos) o None si no existe
-    """
     cursor.execute(
         "SELECT username, permisos FROM usuarios WHERE id = ?", 
         (usuario_id,)
