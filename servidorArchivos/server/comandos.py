@@ -386,12 +386,6 @@ def _obtener_info_usuario(cursor, usuario_id):
     return cursor.fetchone()
 
 def _crear_tabla_solicitudes_si_no_existe(cursor):
-    """
-    📋 Crea la tabla de solicitudes de permisos si no existe.
-
-    Args:
-        cursor (sqlite3.Cursor): Cursor de la base de datos
-    """
     cursor.execute("""
         CREATE TABLE IF NOT EXISTS solicitudes_permisos (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -405,17 +399,6 @@ def _crear_tabla_solicitudes_si_no_existe(cursor):
     """)
 
 def _existe_solicitud_pendiente(cursor, usuario_id, permiso_solicitado):
-    """
-    🔍 Verifica si ya existe una solicitud pendiente para un usuario y permiso.
-
-    Args:
-        cursor (sqlite3.Cursor): Cursor de la base de datos
-        usuario_id (int): ID del usuario
-        permiso_solicitado (str): Permiso solicitado
-
-    Returns:
-        bool: True si existe una solicitud pendiente, False en caso contrario
-    """
     cursor.execute("""
         SELECT id FROM solicitudes_permisos 
         WHERE usuario_id = ? AND permiso_solicitado = ? AND estado = 'pendiente'
@@ -424,32 +407,12 @@ def _existe_solicitud_pendiente(cursor, usuario_id, permiso_solicitado):
     return cursor.fetchone() is not None
 
 def _registrar_solicitud(cursor, usuario_id, permiso_solicitado):
-    """
-    📝 Registra una nueva solicitud de cambio de permisos.
-
-    Args:
-        cursor (sqlite3.Cursor): Cursor de la base de datos
-        usuario_id (int): ID del usuario
-        permiso_solicitado (str): Permiso solicitado
-    """
     cursor.execute("""
         INSERT INTO solicitudes_permisos (usuario_id, permiso_solicitado)
         VALUES (?, ?)
     """, (usuario_id, permiso_solicitado))
 
 def ver_solicitudes_permisos(usuario_id):
-    """
-    📊 Muestra las solicitudes de cambio de permisos.
-
-    Los administradores pueden ver todas las solicitudes pendientes,
-    mientras que los usuarios normales solo ven sus propias solicitudes.
-
-    Args:
-        usuario_id (int): ID del usuario que solicita ver las solicitudes
-
-    Returns:
-        str: Lista de solicitudes o mensaje informativo
-    """
     try:
         # 🔌 Obtener conexión a la base de datos
         conn = obtener_conexion()
@@ -478,32 +441,11 @@ def ver_solicitudes_permisos(usuario_id):
         return f"❌ Error al consultar solicitudes de permisos: {error}"
 
 def _obtener_permisos_usuario(cursor, usuario_id):
-    """
-    🔑 Obtiene los permisos de un usuario por su ID.
-
-    Args:
-        cursor (sqlite3.Cursor): Cursor de la base de datos
-        usuario_id (int): ID del usuario
-
-    Returns:
-        str: Permisos del usuario o None si no existe
-    """
     cursor.execute("SELECT permisos FROM usuarios WHERE id = ?", (usuario_id,))
     resultado = cursor.fetchone()
     return resultado[0] if resultado else None
 
 def _obtener_solicitudes(cursor, usuario_id, es_admin):
-    """
-    🔍 Obtiene las solicitudes de permisos según el tipo de usuario.
-
-    Args:
-        cursor (sqlite3.Cursor): Cursor de la base de datos
-        usuario_id (int): ID del usuario
-        es_admin (bool): Indica si el usuario es administrador
-
-    Returns:
-        list: Lista de solicitudes
-    """
     if es_admin:
         # 👑 Administradores ven todas las solicitudes pendientes
         cursor.execute("""
@@ -526,16 +468,6 @@ def _obtener_solicitudes(cursor, usuario_id, es_admin):
     return cursor.fetchall()
 
 def _formatear_resultado_solicitudes(solicitudes, es_admin):
-    """
-    📝 Formatea el resultado de las solicitudes para mostrar al usuario.
-
-    Args:
-        solicitudes (list): Lista de solicitudes obtenidas de la base de datos
-        es_admin (bool): Indica si el usuario es administrador
-
-    Returns:
-        str: Texto formateado con las solicitudes
-    """
     if not solicitudes:
         return "ℹ️ No hay solicitudes de permisos pendientes."
 
@@ -569,19 +501,6 @@ def _formatear_resultado_solicitudes(solicitudes, es_admin):
     return resultado
 
 def aprobar_cambio_permisos(usuario_id, id_solicitud, decision):
-    """
-    ✅ Aprueba o rechaza una solicitud de cambio de permisos.
-
-    Solo los administradores pueden aprobar o rechazar solicitudes.
-
-    Args:
-        usuario_id (int): ID del administrador que aprueba/rechaza
-        id_solicitud (str): ID de la solicitud a aprobar/rechazar
-        decision (str): 'aprobar' o 'rechazar'
-
-    Returns:
-        str: Mensaje indicando el resultado de la operación
-    """
     try:
         # 🔌 Obtener conexión a la base de datos
         conn = obtener_conexion()
@@ -623,16 +542,6 @@ def aprobar_cambio_permisos(usuario_id, id_solicitud, decision):
         return f"❌ Error al procesar solicitud de permisos: {error}"
 
 def _es_usuario_administrador(cursor, usuario_id):
-    """
-    👑 Verifica si un usuario tiene permisos de administrador.
-
-    Args:
-        cursor (sqlite3.Cursor): Cursor de la base de datos
-        usuario_id (int): ID del usuario a verificar
-
-    Returns:
-        bool: True si es administrador, False en caso contrario
-    """
     cursor.execute("SELECT permisos FROM usuarios WHERE id = ?", (usuario_id,))
     permisos = cursor.fetchone()
 
@@ -642,28 +551,9 @@ def _es_usuario_administrador(cursor, usuario_id):
     return permisos[0] == 'admin'
 
 def _es_decision_valida(decision):
-    """
-    ✓ Verifica si la decisión es válida.
-
-    Args:
-        decision (str): Decisión a validar
-
-    Returns:
-        bool: True si es válida, False en caso contrario
-    """
     return decision.lower() in ['aprobar', 'rechazar']
 
 def _obtener_info_solicitud(cursor, id_solicitud):
-    """
-    🔍 Obtiene información de una solicitud pendiente.
-
-    Args:
-        cursor (sqlite3.Cursor): Cursor de la base de datos
-        id_solicitud (str): ID de la solicitud
-
-    Returns:
-        tuple: (solicitante_id, permiso_solicitado, solicitante_username) o None
-    """
     cursor.execute("""
         SELECT s.usuario_id, s.permiso_solicitado, u.username
         FROM solicitudes_permisos s
@@ -674,14 +564,6 @@ def _obtener_info_solicitud(cursor, id_solicitud):
     return cursor.fetchone()
 
 def _actualizar_estado_solicitud(cursor, id_solicitud, estado):
-    """
-    📝 Actualiza el estado de una solicitud.
-
-    Args:
-        cursor (sqlite3.Cursor): Cursor de la base de datos
-        id_solicitud (str): ID de la solicitud
-        estado (str): Nuevo estado ('aprobada' o 'rechazada')
-    """
     cursor.execute("""
         UPDATE solicitudes_permisos
         SET estado = ?, fecha_resolucion = CURRENT_TIMESTAMP
@@ -689,20 +571,6 @@ def _actualizar_estado_solicitud(cursor, id_solicitud, estado):
     """, (estado, id_solicitud))
 
 def _procesar_decision(cursor, decision, id_solicitud, solicitante_id, solicitante_username, permiso_solicitado):
-    """
-    🔄 Procesa la decisión tomada sobre una solicitud.
-
-    Args:
-        cursor (sqlite3.Cursor): Cursor de la base de datos
-        decision (str): Decisión tomada ('aprobar' o 'rechazar')
-        id_solicitud (str): ID de la solicitud
-        solicitante_id (int): ID del usuario solicitante
-        solicitante_username (str): Nombre de usuario del solicitante
-        permiso_solicitado (str): Permiso solicitado
-
-    Returns:
-        str: Mensaje de resultado
-    """
     # Emojis para los permisos
     emojis_permiso = {
         'lectura': '📖',

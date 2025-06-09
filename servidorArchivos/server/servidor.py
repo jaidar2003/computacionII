@@ -1,7 +1,3 @@
-"""🌐 Servidor de Archivos Seguro
-Maneja conexiones SSL, autenticación de usuarios, procesamiento de comandos
-y múltiples clientes mediante hilos."""
-
 import socket
 import ssl
 import threading

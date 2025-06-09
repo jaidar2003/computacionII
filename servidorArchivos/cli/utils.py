@@ -1,6 +1,3 @@
-# 🛠️ Utilidades para el Cliente del Servidor de Archivos
-# Proporciona funciones para entrada segura de contraseñas y cálculo de hashes
-
 import os
 import hashlib
 import getpass

@@ -1,20 +1,3 @@
-"""
-🚀 Módulo de Tareas Asíncronas con Celery
------------------------------------------
-Este módulo implementa tareas que se ejecutan en segundo plano
-utilizando Celery como sistema de colas de tareas.
-
-Características principales:
-- 🔄 Procesamiento asíncrono de tareas
-- 🔍 Verificación de integridad de archivos mediante hash
-- 🦠 Escaneo de virus con ClamAV
-- 📝 Registro de resultados en la base de datos
-- 🛡️ Implementación alternativa cuando Celery no está disponible
-
-Las tareas se ejecutan en segundo plano para no bloquear el servidor
-principal mientras se realizan operaciones que pueden llevar tiempo.
-"""
-
 import hashlib
 import subprocess
 import os
@@ -86,25 +69,6 @@ VIRUS_NO_ESCANEADO = 'no escaneado'
 # Usar el decorador apropiado según si Celery está disponible o no
 @task_decorator
 def verificar_integridad_y_virus(ruta_archivo, hash_esperado=None):
-    """
-    🔍 Verifica la integridad y seguridad de un archivo.
-
-    Esta tarea se ejecuta en segundo plano usando Celery y Redis como broker.
-    Realiza verificaciones de integridad mediante hash SHA-256 y escaneo
-    de virus utilizando ClamAV.
-
-    Args:
-        ruta_archivo (str): Ruta completa al archivo a verificar
-        hash_esperado (str, optional): Hash SHA-256 esperado para verificación
-
-    Returns:
-        dict: Resultado de la verificación con los siguientes campos:
-            - ruta: Ruta del archivo verificado
-            - estado: Estado general ('ok', 'corrupto', 'infectado', 'desconocido')
-            - integridad: Resultado de verificación de integridad
-            - virus: Resultado de verificación de virus
-            - mensaje: Mensaje descriptivo del resultado
-    """
     # 🏁 Inicializar resultado
     resultado = _inicializar_resultado(ruta_archivo)
 
@@ -124,15 +88,6 @@ def verificar_integridad_y_virus(ruta_archivo, hash_esperado=None):
     return resultado
 
 def _inicializar_resultado(ruta_archivo):
-    """
-    🏁 Inicializa la estructura de resultado.
-
-    Args:
-        ruta_archivo (str): Ruta del archivo
-
-    Returns:
-        dict: Estructura de resultado inicializada
-    """
     return {
         'ruta': ruta_archivo,
         'estado': ESTADO_DESCONOCIDO,
@@ -142,14 +97,6 @@ def _inicializar_resultado(ruta_archivo):
     }
 
 def _verificar_integridad(resultado, ruta_archivo, hash_esperado):
-    """
-    🔍 Verifica la integridad del archivo mediante hash SHA-256.
-
-    Args:
-        resultado (dict): Diccionario de resultado a actualizar
-        ruta_archivo (str): Ruta del archivo a verificar
-        hash_esperado (str): Hash SHA-256 esperado
-    """
     try:
         hash_actual = _calcular_hash_archivo(ruta_archivo)
 
@@ -164,30 +111,11 @@ def _verificar_integridad(resultado, ruta_archivo, hash_esperado):
         resultado['mensaje'] += f"❌ Error al calcular hash: {error}. "
 
 def _calcular_hash_archivo(ruta_archivo):
-    """
-    🧮 Calcula el hash SHA-256 de un archivo.
-
-    Args:
-        ruta_archivo (str): Ruta del archivo
-
-    Returns:
-        str: Hash SHA-256 en formato hexadecimal
-
-    Raises:
-        Exception: Si ocurre un error al leer el archivo o calcular el hash
-    """
     with open(ruta_archivo, 'rb') as archivo:
         contenido = archivo.read()
         return hashlib.sha256(contenido).hexdigest()
 
 def _verificar_virus(resultado, ruta_archivo):
-    """
-    🦠 Verifica si el archivo contiene virus usando ClamAV.
-
-    Args:
-        resultado (dict): Diccionario de resultado a actualizar
-        ruta_archivo (str): Ruta del archivo a verificar
-    """
     try:
         escaneo = subprocess.run(
             ['clamscan', ruta_archivo], 
@@ -209,26 +137,11 @@ def _verificar_virus(resultado, ruta_archivo):
         resultado['mensaje'] += f"❌ Error en escaneo: {error}. "
 
 def _actualizar_estado_final(resultado):
-    """
-    📊 Actualiza el estado final del resultado.
-
-    Si no se ha establecido un estado específico (corrupto o infectado),
-    se establece como 'ok' si no hubo errores.
-
-    Args:
-        resultado (dict): Diccionario de resultado a actualizar
-    """
     if resultado['estado'] == ESTADO_DESCONOCIDO:
         resultado['estado'] = ESTADO_OK
         resultado['mensaje'] = '✅ Archivo verificado con éxito.'
 
 def _registrar_evento(resultado):
-    """
-    📝 Registra el resultado de la verificación en la base de datos.
-
-    Args:
-        resultado (dict): Resultado de la verificación
-    """
     try:
         mensaje_detallado = (
             f"{resultado['estado'].upper()} - "
