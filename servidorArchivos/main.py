@@ -225,8 +225,6 @@ def _iniciar_modo_servidor(args):
 
 def _iniciar_modo_cliente(args):
     # 👤 Inicia la aplicación en modo cliente
-    # Si el host es 0.0.0.0 (escucha en todas las interfaces), 
-    # conectar a localhost o al host especificado en .env
     cliente_host = os.getenv("CLIENTE_HOST", "127.0.0.1") if args.host == '0.0.0.0' else args.host
 
     if args.verbose:

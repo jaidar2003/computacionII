@@ -1,19 +1,3 @@
-"""
-🔐 Módulo de Seguridad del Servidor de Archivos
-----------------------------------------------
-Este módulo implementa las funciones de seguridad para el servidor,
-incluyendo autenticación de usuarios, registro y gestión de contraseñas.
-
-Características principales:
-- 🔑 Autenticación de usuarios contra la base de datos
-- 👤 Registro de nuevos usuarios
-- 🔒 Generación segura de hashes de contraseñas
-- ✅ Verificación de contraseñas
-- 🛡️ Implementación alternativa cuando bcrypt no está disponible
-
-El módulo utiliza bcrypt para el hash de contraseñas cuando está disponible,
-o una implementación básica con hashlib y salt cuando no lo está.
-"""
 
 import os
 import sys
@@ -45,16 +29,6 @@ except ImportError:
     print("⚠️ bcrypt no está instalado. Usando implementación básica para el hash de contraseñas.")
 
 def autenticar_usuario_en_servidor(username, password):
-    """
-    🔑 Autentica un usuario contra la base de datos.
-
-    Args:
-        username (str): Nombre de usuario
-        password (str): Contraseña en texto plano
-
-    Returns:
-        tuple: (id, permisos) si la autenticación es exitosa, None en caso contrario
-    """
     try:
         usuario = autenticar_usuario(username, password)
         if usuario:
@@ -68,17 +42,6 @@ def autenticar_usuario_en_servidor(username, password):
         return None
 
 def registrar_usuario(username, password, permisos="lectura"):
-    """
-    👤 Registra un nuevo usuario en la base de datos.
-
-    Args:
-        username (str): Nombre de usuario
-        password (str): Contraseña en texto plano
-        permisos (str, optional): Nivel de permisos. Defaults to "lectura".
-
-    Returns:
-        str: Mensaje indicando el resultado de la operación
-    """
     try:
         resultado = db_registrar_usuario(username, password, permisos)
         if resultado.startswith("✅"):
@@ -92,21 +55,6 @@ def registrar_usuario(username, password, permisos="lectura"):
         return mensaje_error
 
 def hash_password(password: str) -> str:
-    """
-    🔒 Genera un hash seguro para la contraseña.
-
-    Utiliza bcrypt si está disponible, o una implementación básica 
-    con hashlib y salt si no lo está.
-
-    Args:
-        password (str): Contraseña en texto plano
-
-    Returns:
-        str: Hash de la contraseña
-
-    Raises:
-        ValueError: Si la contraseña está vacía
-    """
     if not password:
         raise ValueError("❌ La contraseña no puede estar vacía")
 
@@ -122,15 +70,6 @@ def hash_password(password: str) -> str:
         raise
 
 def _hash_password_basic(password: str) -> str:
-    """
-    🔧 Implementación básica de hash con hashlib y salt.
-
-    Args:
-        password (str): Contraseña en texto plano
-
-    Returns:
-        str: Hash de la contraseña en formato "salt$hash"
-    """
     # Generar salt aleatorio
     salt = base64.b64encode(os.urandom(SALT_BYTES)).decode('utf-8')
 
@@ -142,19 +81,6 @@ def _hash_password_basic(password: str) -> str:
     return f"{salt}{HASH_SEPARATOR}{h.hexdigest()}"
 
 def verificar_password(password: str, hashed: str) -> bool:
-    """
-    ✅ Verifica si una contraseña coincide con su hash.
-
-    Utiliza bcrypt si está disponible, o una implementación básica
-    con hashlib y salt si no lo está.
-
-    Args:
-        password (str): Contraseña en texto plano
-        hashed (str): Hash almacenado
-
-    Returns:
-        bool: True si la contraseña coincide, False en caso contrario
-    """
     if not password or not hashed:
         return False
 
@@ -170,16 +96,6 @@ def verificar_password(password: str, hashed: str) -> bool:
         return False
 
 def _verificar_password_basic(password: str, hashed: str) -> bool:
-    """
-    🔧 Implementación básica de verificación de contraseña con hashlib y salt.
-
-    Args:
-        password (str): Contraseña en texto plano
-        hashed (str): Hash almacenado en formato "salt$hash"
-
-    Returns:
-        bool: True si la contraseña coincide, False en caso contrario
-    """
     try:
         # Separar salt y hash
         salt, hash_value = hashed.split(HASH_SEPARATOR, 1)

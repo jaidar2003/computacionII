@@ -214,7 +214,6 @@ def _establecer_conexion_ssl(host, port, verificar_cert=True):
 
 def _recibir_mensajes_bienvenida(conexion):
     # 👋 Recibe y muestra mensajes de bienvenida
-    # El servidor envía un mensaje de bienvenida
     mensaje = conexion.recv(BUFFER_SIZE).decode('utf-8')
     print(ANSI_VERDE + mensaje + ANSI_RESET)
 
@@ -228,12 +227,10 @@ def _manejar_autenticacion(conexion):
             # 🔑 Iniciar sesión
             if _iniciar_sesion(conexion):
                 return True
-            # Si la autenticación falla, continuamos en el bucle para mostrar el menú de nuevo
 
         elif opcion == '2':
             # 📝 Registrar nuevo usuario
             _registrar_usuario(conexion)
-            # Después de registrar, continuamos en el bucle para que el usuario inicie sesión
 
         elif opcion == '3':
             # 🚪 Salir
@@ -246,7 +243,6 @@ def _manejar_autenticacion(conexion):
 
 def _iniciar_sesion(conexion):
     # 🔑 Inicia sesión. Retorna True si exitoso
-    # Recibir prompt de usuario del servidor y descartarlo
     conexion.recv(BUFFER_SIZE)  # Descartar el prompt "Usuario: " del servidor
 
     # Solicitar credenciales
@@ -284,10 +280,7 @@ def _registrar_usuario(conexion):
 def _procesar_comandos(conexion):
     # 💻 Procesa comandos del usuario
     while True:
-        # Recibir prompt del servidor
         prompt = conexion.recv(BUFFER_SIZE).decode('utf-8')
-
-        # Solicitar comando al usuario
         comando = input(prompt)
 
         # Procesar comando especial CREAR para añadir hash y enviar contenido
@@ -302,15 +295,12 @@ def _procesar_comandos(conexion):
             _procesar_comando_descargar(comando, conexion)
             continue
 
-        # Enviar comando al servidor
         _enviar_mensaje(conexion, comando)
 
-        # Salir si el comando es SALIR
         if comando.upper() == "SALIR":
             print(MENSAJE_DESCONECTAR)
             break
 
-        # Mostrar respuesta del servidor
         respuesta = conexion.recv(BUFFER_SIZE).decode('utf-8')
         print(respuesta)
 
@@ -370,9 +360,7 @@ def _procesar_comando_descargar(comando, conexion):
     if not ruta_destino:
         ruta_destino = nombre_archivo
 
-    # Verificar si la ruta destino es un directorio
     if os.path.isdir(ruta_destino):
-        # Si es un directorio, añadir el nombre del archivo al final
         ruta_destino = os.path.join(ruta_destino, nombre_archivo)
         print(f"{ANSI_AMARILLO}ℹ️ Guardando en: {ruta_destino}{ANSI_RESET}")
 
@@ -393,7 +381,6 @@ def _procesar_comando_descargar(comando, conexion):
     respuesta = conexion.recv(BUFFER_SIZE).decode('utf-8')
     print(respuesta)
 
-    # Verificar si el servidor está listo para enviar
     if "✅ Listo para enviar" not in respuesta:
         return
 
@@ -410,33 +397,27 @@ def _procesar_comando_descargar(comando, conexion):
         file_size = 0
         print(f"{ANSI_AMARILLO}⚠️ Error al procesar tamaño: {e}{ANSI_RESET}")
 
-    # Confirmar que estamos listos para recibir
     _enviar_mensaje(conexion, "LISTO")
 
     print(f"{ANSI_AMARILLO}📥 Recibiendo archivo '{nombre_archivo}'...{ANSI_RESET}")
 
     try:
         # Recibir y guardar el archivo
-        print(f"[DEBUG] Guardando en: {ruta_destino}")
         with open(ruta_destino, 'wb') as f:
             bytes_recibidos = 0
             chunk_size = 8192  # 8KB chunks
 
             while bytes_recibidos < file_size:
-                # Calcular tamaño del chunk a recibir
                 bytes_restantes = file_size - bytes_recibidos
                 chunk_actual = min(chunk_size, bytes_restantes)
 
-                # Recibir chunk
                 chunk = conexion.recv(chunk_actual)
                 if not chunk:  # Conexión cerrada por el servidor
                     raise ConnectionError("Conexión cerrada por el servidor durante la transferencia")
 
-                # Escribir chunk y actualizar contador
                 f.write(chunk)
                 bytes_recibidos += len(chunk)
 
-                # Mostrar progreso
                 if file_size > 0:
                     porcentaje = int(bytes_recibidos * 100 / file_size)
                     print(f"\r📥 Recibiendo: {bytes_recibidos}/{file_size} bytes ({porcentaje}%)", end="")
@@ -490,12 +471,9 @@ def _procesar_comando_crear(comando, conexion):
                 if "✅" in respuesta:
                     print(f"{ANSI_AMARILLO}📤 Enviando contenido del archivo...{ANSI_RESET}")
                     try:
-                        # Obtener tamaño del archivo
                         file_size = os.path.getsize(archivo_local)
-                        # Enviar tamaño del archivo primero
                         _enviar_mensaje(conexion, str(file_size))
 
-                        # Enviar en chunks
                         with open(archivo_local, 'rb') as f:
                             bytes_sent = 0
                             chunk_size = 8192  # 8KB chunks
@@ -505,7 +483,6 @@ def _procesar_comando_crear(comando, conexion):
                                     break
                                 conexion.sendall(chunk)
                                 bytes_sent += len(chunk)
-                                # Mostrar progreso
                                 print(f"\r📤 Enviando: {bytes_sent}/{file_size} bytes ({int(bytes_sent*100/file_size)}%)", end="")
                             print("\n✅ Envío completado.")
                     except socket.timeout:
@@ -554,7 +531,6 @@ def _enviar_comando(conexion, comando):
 
 
 if __name__ == "__main__":
-    # Configurar logging para escribir a un archivo en lugar de la consola
     log_dir = os.path.join(os.path.dirname(os.path.dirname(__file__)), "historyLogs")
     if not os.path.exists(log_dir):
         os.makedirs(log_dir)
@@ -571,7 +547,6 @@ if __name__ == "__main__":
     host = os.getenv("SERVIDOR_HOST", "127.0.0.1")
     port = int(os.getenv("SERVIDOR_PORT", 1608))
 
-    # Si el host es 0.0.0.0 (escucha en todas las interfaces), conectar a localhost
     cliente_host = "localhost" if host == "0.0.0.0" else host
 
     iniciar_cliente(cliente_host, port)

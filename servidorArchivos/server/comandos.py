@@ -1,6 +1,3 @@
-"""📝 Comandos del Servidor de Archivos
-Implementa comandos para operaciones con archivos (LISTAR, CREAR, ELIMINAR, RENOMBRAR)
-y gestión de permisos (SOLICITAR_PERMISOS, APROBAR_PERMISOS, VER_SOLICITUDES)."""
 
 import os
 import sys
@@ -8,7 +5,6 @@ import socket
 from functools import wraps
 
 def _enviar_mensaje(conexion, mensaje):
-    """Envía mensaje al cliente"""
     if conexion:
         conexion.sendall(mensaje.encode('utf-8'))
 
@@ -20,7 +16,6 @@ from base_datos.db import obtener_conexion
 
 # Decorador para validar argumentos
 def validar_argumentos(num_args=None, min_args=None, max_args=None, mensaje_error=None):
-    """Decorador que valida el número de argumentos para un comando"""
     def decorador(func):
         @wraps(func)
         def wrapper(partes, *args, **kwargs):
@@ -42,13 +37,11 @@ def validar_argumentos(num_args=None, min_args=None, max_args=None, mensaje_erro
 
 # Manejadores de comandos
 def _cmd_listar(partes, directorio_base, usuario_id=None):
-    """Maneja comando LISTAR"""
     return listar_archivos(directorio_base)
 
 @validar_argumentos(min_args=1, max_args=2, 
                    mensaje_error="❌ Formato incorrecto. Usa: CREAR nombre_archivo [hash]")
 def _cmd_crear(partes, directorio_base, usuario_id=None, conexion=None):
-    """Maneja comando CREAR"""
     if len(partes) == 2:
         return crear_archivo(directorio_base, partes[1], None, conexion)
     else:  # len(partes) == 3
@@ -57,36 +50,30 @@ def _cmd_crear(partes, directorio_base, usuario_id=None, conexion=None):
 @validar_argumentos(num_args=1, 
                    mensaje_error="❌ Formato incorrecto. Usa: ELIMINAR nombre_archivo")
 def _cmd_eliminar(partes, directorio_base, usuario_id=None):
-    """Maneja comando ELIMINAR"""
     return eliminar_archivo(directorio_base, partes[1])
 
 @validar_argumentos(num_args=2, 
                    mensaje_error="❌ Formato incorrecto. Usa: RENOMBRAR nombre_viejo nombre_nuevo")
 def _cmd_renombrar(partes, directorio_base, usuario_id=None):
-    """Maneja comando RENOMBRAR"""
     return renombrar_archivo(directorio_base, partes[1], partes[2])
 
 @validar_argumentos(num_args=1, 
                    mensaje_error="❌ Formato incorrecto. Usa: SOLICITAR_PERMISOS tipo_permiso")
 def _cmd_solicitar_permisos(partes, directorio_base, usuario_id=None):
-    """Maneja comando SOLICITAR_PERMISOS"""
     return solicitar_cambio_permisos(usuario_id, partes[1])
 
 @validar_argumentos(num_args=2, 
                    mensaje_error="❌ Formato incorrecto. Usa: APROBAR_PERMISOS id_solicitud decision")
 def _cmd_aprobar_permisos(partes, directorio_base, usuario_id=None):
-    """Maneja comando APROBAR_PERMISOS"""
     return aprobar_cambio_permisos(usuario_id, partes[1], partes[2])
 
 @validar_argumentos(num_args=0, 
                    mensaje_error="❌ Formato incorrecto. Usa: VER_SOLICITUDES")
 def _cmd_ver_solicitudes(partes, directorio_base, usuario_id=None):
-    """Maneja comando VER_SOLICITUDES"""
     return ver_solicitudes_permisos(usuario_id)
 
 # 🗺️ Mapeo de comandos a sus manejadores
 def _cmd_verificar(partes, directorio_base, usuario_id=None):
-    """Maneja comando VERIFICAR para comprobar estado de archivos"""
     if len(partes) != 2:
         return "❌ Uso: VERIFICAR [archivo]"
 
@@ -96,7 +83,6 @@ def _cmd_verificar(partes, directorio_base, usuario_id=None):
 @validar_argumentos(num_args=1, 
                    mensaje_error="❌ Formato incorrecto. Usa: DESCARGAR nombre_archivo")
 def _cmd_descargar(partes, directorio_base, usuario_id=None, conexion=None):
-    """Maneja comando DESCARGAR para enviar archivos al cliente"""
     return descargar_archivo(directorio_base, partes[1], conexion)
 
 COMANDOS = {
