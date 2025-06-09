@@ -14,6 +14,13 @@ sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
 from tareas.celery import verificar_integridad_y_virus
 from base_datos.db import obtener_conexion
 
+# Niveles de permisos en orden jerárquico
+NIVELES_PERMISOS = {
+    'lectura': 1,
+    'escritura': 2,
+    'admin': 3
+}
+
 # Decorador para validar argumentos
 def validar_argumentos(num_args=None, min_args=None, max_args=None, mensaje_error=None):
     def decorador(func):
@@ -35,10 +42,71 @@ def validar_argumentos(num_args=None, min_args=None, max_args=None, mensaje_erro
         return wrapper
     return decorador
 
+# Función para verificar si un usuario tiene un nivel de permiso específico
+def _tiene_permiso(usuario_id, nivel_requerido):
+    """
+    Verifica si un usuario tiene el nivel de permiso requerido o superior.
+
+    Args:
+        usuario_id (int): ID del usuario
+        nivel_requerido (str): Nivel de permiso requerido ('lectura', 'escritura', 'admin')
+
+    Returns:
+        bool: True si el usuario tiene el permiso requerido, False en caso contrario
+    """
+    if not usuario_id:
+        return False
+
+    try:
+        conn = obtener_conexion()
+        cursor = conn.cursor()
+
+        # Obtener permisos del usuario
+        permisos_usuario = _obtener_permisos_usuario(cursor, usuario_id)
+        conn.close()
+
+        if not permisos_usuario:
+            return False
+
+        # Verificar si el nivel de permiso del usuario es suficiente
+        nivel_usuario = NIVELES_PERMISOS.get(permisos_usuario, 0)
+        nivel_necesario = NIVELES_PERMISOS.get(nivel_requerido, 0)
+
+        return nivel_usuario >= nivel_necesario
+
+    except Exception as error:
+        print(f"❌ Error al verificar permisos: {error}")
+        return False
+
+# Decorador para verificar permisos
+def requiere_permiso(nivel_requerido):
+    """
+    Decorador que verifica si un usuario tiene el nivel de permiso requerido.
+
+    Args:
+        nivel_requerido (str): Nivel de permiso requerido ('lectura', 'escritura', 'admin')
+
+    Returns:
+        function: Decorador que verifica permisos
+    """
+    def decorador(func):
+        @wraps(func)
+        def wrapper(partes, directorio_base, usuario_id=None, *args, **kwargs):
+            # Verificar permisos
+            if not _tiene_permiso(usuario_id, nivel_requerido):
+                return f"❌ No tienes permisos suficientes. Se requiere nivel: {nivel_requerido}"
+
+            # Si tiene permisos, ejecutar la función
+            return func(partes, directorio_base, usuario_id, *args, **kwargs)
+        return wrapper
+    return decorador
+
 # Manejadores de comandos
+@requiere_permiso('lectura')
 def _cmd_listar(partes, directorio_base, usuario_id=None):
     return listar_archivos(directorio_base)
 
+@requiere_permiso('escritura')
 @validar_argumentos(min_args=1, max_args=2, 
                    mensaje_error="❌ Formato incorrecto. Usa: CREAR nombre_archivo [hash]")
 def _cmd_crear(partes, directorio_base, usuario_id=None, conexion=None):
@@ -47,32 +115,38 @@ def _cmd_crear(partes, directorio_base, usuario_id=None, conexion=None):
     else:  # len(partes) == 3
         return crear_archivo(directorio_base, partes[1], partes[2], conexion)
 
+@requiere_permiso('escritura')
 @validar_argumentos(num_args=1, 
                    mensaje_error="❌ Formato incorrecto. Usa: ELIMINAR nombre_archivo")
 def _cmd_eliminar(partes, directorio_base, usuario_id=None):
     return eliminar_archivo(directorio_base, partes[1])
 
+@requiere_permiso('escritura')
 @validar_argumentos(num_args=2, 
                    mensaje_error="❌ Formato incorrecto. Usa: RENOMBRAR nombre_viejo nombre_nuevo")
 def _cmd_renombrar(partes, directorio_base, usuario_id=None):
     return renombrar_archivo(directorio_base, partes[1], partes[2])
 
+@requiere_permiso('lectura')
 @validar_argumentos(num_args=1, 
                    mensaje_error="❌ Formato incorrecto. Usa: SOLICITAR_PERMISOS tipo_permiso")
 def _cmd_solicitar_permisos(partes, directorio_base, usuario_id=None):
     return solicitar_cambio_permisos(usuario_id, partes[1])
 
+@requiere_permiso('admin')
 @validar_argumentos(num_args=2, 
                    mensaje_error="❌ Formato incorrecto. Usa: APROBAR_PERMISOS id_solicitud decision")
 def _cmd_aprobar_permisos(partes, directorio_base, usuario_id=None):
     return aprobar_cambio_permisos(usuario_id, partes[1], partes[2])
 
+@requiere_permiso('lectura')
 @validar_argumentos(num_args=0, 
                    mensaje_error="❌ Formato incorrecto. Usa: VER_SOLICITUDES")
 def _cmd_ver_solicitudes(partes, directorio_base, usuario_id=None):
     return ver_solicitudes_permisos(usuario_id)
 
 # 🗺️ Mapeo de comandos a sus manejadores
+@requiere_permiso('lectura')
 def _cmd_verificar(partes, directorio_base, usuario_id=None):
     if len(partes) != 2:
         return "❌ Uso: VERIFICAR [archivo]"
@@ -80,6 +154,7 @@ def _cmd_verificar(partes, directorio_base, usuario_id=None):
     nombre_archivo = partes[1]
     return verificar_estado_archivo(directorio_base, nombre_archivo)
 
+@requiere_permiso('lectura')
 @validar_argumentos(num_args=1, 
                    mensaje_error="❌ Formato incorrecto. Usa: DESCARGAR nombre_archivo")
 def _cmd_descargar(partes, directorio_base, usuario_id=None, conexion=None):
@@ -505,11 +580,6 @@ def aprobar_cambio_permisos(usuario_id, id_solicitud, decision):
         # 🔌 Obtener conexión a la base de datos
         conn = obtener_conexion()
         cursor = conn.cursor()
-
-        # 👑 Verificar si el usuario es administrador
-        if not _es_usuario_administrador(cursor, usuario_id):
-            conn.close()
-            return "❌ Solo los administradores pueden aprobar solicitudes de permisos."
 
         # ✓ Validar la decisión
         if not _es_decision_valida(decision):
