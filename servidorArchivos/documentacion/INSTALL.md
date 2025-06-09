@@ -102,13 +102,13 @@ celery -A tareas.celery_app worker --loglevel=info
 ### Modo Normal (con Threads)
 
 ```bash
-python servidorArchivos/main.py -p 5000 -H 127.0.0.1 -d archivos_servidor
+python servidorArchivos/main.py -p 5000 -H 127.0.0.1 -d archivos
 ```
 
 ### Modo Asíncrono (con asyncio)
 
 ```bash
-python servidorArchivos/main.py -p 5000 -H 127.0.0.1 -d archivos_servidor -a
+python servidorArchivos/main.py -p 5000 -H 127.0.0.1 -d archivos -a
 ```
 
 ### Modo Verbose (logs detallados)

@@ -3,7 +3,7 @@ import subprocess
 import os
 import sys
 from dotenv import load_dotenv
-from base_datos.db import log_evento
+from baseDeDatos.db import log_evento
 
 # 🧪 Carga las variables de entorno desde .env
 load_dotenv()

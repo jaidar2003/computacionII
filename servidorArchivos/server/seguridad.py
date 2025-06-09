@@ -8,7 +8,7 @@ import logging
 # 🔧 Asegurar que el path raíz esté en sys.path antes de cualquier import personalizado
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
 
-from base_datos.db import autenticar_usuario, registrar_usuario as db_registrar_usuario
+from baseDeDatos.db import autenticar_usuario, registrar_usuario as db_registrar_usuario
 
 # 🔄 Configuración de logging
 logger = logging.getLogger(__name__)
@@ -113,7 +113,7 @@ def _verificar_password_basic(password: str, hashed: str) -> bool:
 # Verificar que el script se ejecuta correctamente cuando se llama directamente
 if __name__ == "__main__":
     print("✅ Módulo seguridad.py cargado correctamente.")
-    print("✅ Importación de base_datos.db exitosa.")
+    print("✅ Importación de baseDeDatos.db exitosa.")
 
     # Prueba simple de las funciones
     print("🧪 Probando funciones de hash y verificación...")

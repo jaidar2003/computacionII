@@ -18,16 +18,16 @@ except ImportError:
     from comandos import manejar_comando
     from seguridad import autenticar_usuario_en_servidor, registrar_usuario
 
-from base_datos.db import log_evento
+from baseDeDatos.db import log_evento
 load_dotenv()
 
 # Configuración del servidor
 SERVIDOR_HOST = os.getenv("SERVIDOR_HOST", "127.0.0.1")
 SERVIDOR_PORT = int(os.getenv("SERVIDOR_PORT", 1608))
-DIRECTORIO_BASE = os.getenv("SERVIDOR_DIR", "archivos_servidor")
+DIRECTORIO_BASE = os.getenv("SERVIDOR_DIR", "archivos")
 
 # Configuración de logging
-log_dir = os.path.join(os.path.dirname(os.path.dirname(__file__)), "historyLogs")
+log_dir = os.path.join(os.path.dirname(os.path.dirname(__file__)), "historial")
 if not os.path.exists(log_dir):
     os.makedirs(log_dir)
 
@@ -216,7 +216,7 @@ def _configurar_argumentos():
 if __name__ == "__main__":
     # 📋 Verificar que los módulos se importaron correctamente
     print("✅ Módulo servidor.py cargado correctamente.")
-    print("✅ Importación de comandos, seguridad y base_datos.db exitosa.")
+    print("✅ Importación de comandos, seguridad y baseDeDatos.db exitosa.")
 
     # 🔧 Configurar argumentos
     args = _configurar_argumentos()

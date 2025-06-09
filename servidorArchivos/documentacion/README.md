@@ -60,7 +60,7 @@ python servidorArchivos/main.py
 
 Para opciones adicionales:
 ```bash
-python servidorArchivos/main.py -p 5000 -H 127.0.0.1 -d archivos_servidor -v
+python servidorArchivos/main.py -p 5000 -H 127.0.0.1 -d archivos -v
 ```
 
 ### 5️⃣ **Ejecutar el Cliente**

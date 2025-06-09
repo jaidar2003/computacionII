@@ -1,8 +1,3 @@
-# 🚀 Servidor de Archivos Seguro
-# ----------------------------
-# Este módulo es el punto de entrada principal para la aplicación.
-# Permite iniciar tanto el servidor como el cliente.
-
 import sys
 import os
 import argparse
@@ -22,7 +17,7 @@ sys.path.append(os.path.abspath(os.path.dirname(__file__)))
 
 # 📚 Importaciones de módulos propios
 from server.servidor import manejar_cliente
-from base_datos.db import crear_tablas
+from baseDeDatos.db import crear_tablas
 from cli.cliente import iniciar_cliente
 
 # 📦 Cargar variables de entorno
@@ -39,7 +34,7 @@ KEY_PATH = os.path.join(BASE_DIR, "certificados", "llave.pem")
 # 🌐 Configuración del servidor desde variables de entorno
 SERVIDOR_HOST = os.getenv("SERVIDOR_HOST", "127.0.0.1")
 SERVIDOR_PORT = int(os.getenv("SERVIDOR_PORT", 1608))
-SERVIDOR_DIR = os.getenv("SERVIDOR_DIR", "archivos_servidor")
+SERVIDOR_DIR = os.getenv("SERVIDOR_DIR", "archivos")
 
 # ⚙️ Crear tablas si no existen
 crear_tablas()

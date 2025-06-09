@@ -24,4 +24,5 @@ def mostrar_comandos_disponibles(permisos):
     print("  - VERIFICAR [archivo]")
     if permisos == "admin":
         print("  - APROBAR_PERMISOS [id] [aprobar/rechazar]")
+        print("  - LISTAR_USUARIOS")
     print("  - SALIR")
