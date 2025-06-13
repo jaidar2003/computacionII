@@ -1,4 +1,4 @@
-# cli/estilos.py
+# commandLineInterface/estilos.py
 
 # Colores ANSI
 ANSI_VERDE = "\033[1;32m"

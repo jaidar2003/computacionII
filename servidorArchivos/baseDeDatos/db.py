@@ -1,18 +1,3 @@
-"""
-💾 Módulo de Base de Datos del Servidor de Archivos
--------------------------------------------------
-Este módulo implementa las operaciones de base de datos para el servidor,
-incluyendo la gestión de usuarios, logs y eventos.
-
-Características principales:
-- 🗃️ Creación y gestión de tablas
-- 👤 Registro y autenticación de usuarios
-- 📝 Registro de logs de acciones
-- 📊 Registro de eventos del sistema
-
-La base de datos utiliza SQLite para almacenar la información de forma
-persistente y segura.
-"""
 
 import os
 import sqlite3
@@ -62,31 +47,11 @@ CREATE TABLE IF NOT EXISTS log_eventos (
 '''
 
 def obtener_conexion():
-    """
-    🔌 Obtiene una conexión a la base de datos SQLite.
-
-    Utiliza la ruta especificada en la variable de entorno DB_PATH,
-    o crea una base de datos en el directorio actual si no está definida.
-
-    Returns:
-        sqlite3.Connection: Objeto de conexión a la base de datos
-    """
     db_path = os.getenv('DB_PATH', os.path.join(os.path.dirname(__file__), DEFAULT_DB_FILENAME))
     logger.debug(f"🔌 Conectando a la base de datos: {db_path}")
     return sqlite3.connect(db_path)
 
 def crear_tablas():
-    """
-    🗃️ Crea las tablas necesarias en la base de datos si no existen.
-
-    Crea las siguientes tablas:
-    - usuarios: Almacena información de usuarios y sus permisos
-    - logs: Registra acciones realizadas por los usuarios
-    - log_eventos: Registra eventos del sistema
-
-    Returns:
-        bool: True si las tablas se crearon correctamente, False en caso contrario
-    """
     try:
         conn = obtener_conexion()
         cursor = conn.cursor()
@@ -118,17 +83,6 @@ def crear_tablas():
 # para evitar importaciones circulares
 
 def registrar_usuario(username, password, permisos='lectura'):
-    """
-    👤 Registra un nuevo usuario en la base de datos.
-
-    Args:
-        username (str): Nombre de usuario
-        password (str): Contraseña en texto plano
-        permisos (str, optional): Nivel de permisos. Defaults to "lectura".
-
-    Returns:
-        str: Mensaje indicando el resultado de la operación
-    """
     if not username or not password:
         return "❌ El nombre de usuario y la contraseña son obligatorios."
 
@@ -168,30 +122,10 @@ def registrar_usuario(username, password, permisos='lectura'):
         return f"❌ Error al registrar usuario: {error}"
 
 def _usuario_existe(cursor, username):
-    """
-    🔍 Verifica si un usuario ya existe en la base de datos.
-
-    Args:
-        cursor (sqlite3.Cursor): Cursor de la base de datos
-        username (str): Nombre de usuario a verificar
-
-    Returns:
-        bool: True si el usuario existe, False en caso contrario
-    """
     cursor.execute("SELECT username FROM usuarios WHERE username = ?", (username,))
     return cursor.fetchone() is not None
 
 def autenticar_usuario(username, password):
-    """
-    🔑 Autentica un usuario contra la base de datos.
-
-    Args:
-        username (str): Nombre de usuario
-        password (str): Contraseña en texto plano
-
-    Returns:
-        tuple: (id, permisos) si la autenticación es exitosa, None en caso contrario
-    """
     if not username or not password:
         logger.warning("🔑 Intento de autenticación con credenciales vacías")
         return None
@@ -219,17 +153,6 @@ def autenticar_usuario(username, password):
         return None
 
 def registrar_log(usuario_id, accion, archivo=None):
-    """
-    📝 Registra una acción realizada por un usuario.
-
-    Args:
-        usuario_id (int): ID del usuario que realizó la acción
-        accion (str): Descripción de la acción realizada
-        archivo (str, optional): Nombre del archivo afectado, si aplica
-
-    Returns:
-        bool: True si el log se registró correctamente, False en caso contrario
-    """
     try:
         # 🔌 Obtener conexión y registrar el log
         conn = obtener_conexion()
@@ -250,15 +173,6 @@ def registrar_log(usuario_id, accion, archivo=None):
         return False
 
 def log_evento(usuario, ip, accion, mensaje):
-    """
-    📊 Registra un evento del sistema.
-
-    Args:
-        usuario (str): Nombre del usuario o sistema que generó el evento
-        ip (str): Dirección IP desde donde se generó el evento
-        accion (str): Tipo de acción realizada
-        mensaje (str): Descripción detallada del evento
-    """
     try:
         # 🔌 Obtener conexión y registrar el evento
         conn = obtener_conexion()

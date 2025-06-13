@@ -1,9 +1,3 @@
-"""
-Núcleo del sistema de comandos.
-
-Este módulo contiene las funcionalidades centrales para el procesamiento
-de comandos, incluyendo el despachador principal de comandos.
-"""
 
 import os
 import sys
@@ -16,7 +10,7 @@ sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '../..')
 from .decoradores import validar_argumentos, requiere_permiso
 
 # Importar utilidades compartidas
-from .utilidades import _enviar_mensaje
+from comandos.utilidades import _enviar_mensaje
 
 # Importar manejadores de comandos
 from .manejadores import (
@@ -42,18 +36,6 @@ COMANDOS = {
 }
 
 def manejar_comando(comando, directorio_base, usuario_id=None, conexion=None):
-    """
-    Procesa un comando recibido y ejecuta la acción correspondiente.
-
-    Args:
-        comando (str): Comando a procesar
-        directorio_base (str): Directorio base para operaciones con archivos
-        usuario_id (int, optional): ID del usuario que ejecuta el comando
-        conexion (socket, optional): Conexión para comandos que requieren transferencia de datos
-
-    Returns:
-        str: Resultado de la ejecución del comando
-    """
     partes = comando.strip().split()
     if not partes:
         return "❌ Comando vacío."

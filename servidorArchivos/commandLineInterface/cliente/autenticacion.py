@@ -1,9 +1,3 @@
-"""
-Módulo de autenticación para el cliente.
-
-Este módulo contiene las funciones relacionadas con la autenticación
-de usuarios en el servidor de archivos.
-"""
 
 import os
 import sys
@@ -24,28 +18,13 @@ from .utilidades import enviar_mensaje, enviar_comando
 BUFFER_SIZE = 1024  # Tamaño del buffer para recibir datos
 
 def recibir_mensajes_bienvenida(conexion):
-    """
-    Recibe y muestra mensajes de bienvenida del servidor.
-    
-    Args:
-        conexion (socket): Conexión SSL con el servidor
-    """
     mensaje = conexion.recv(BUFFER_SIZE).decode('utf-8')
     print(ANSI_VERDE + mensaje + ANSI_RESET)
 
 def manejar_autenticacion(conexion):
-    """
-    Maneja autenticación o registro. 
-    
-    Args:
-        conexion (socket): Conexión SSL con el servidor
-        
-    Returns:
-        bool: True si exitoso, False en caso contrario
-    """
     # Recibir mensajes de bienvenida
     recibir_mensajes_bienvenida(conexion)
-    
+
     while True:
         mostrar_menu_principal()
         opcion = input("Seleccione una opción: ")
@@ -69,15 +48,6 @@ def manejar_autenticacion(conexion):
             print(f"❌ Opción no válida: {opcion}")
 
 def iniciar_sesion(conexion):
-    """
-    Inicia sesión en el servidor.
-    
-    Args:
-        conexion (socket): Conexión SSL con el servidor
-        
-    Returns:
-        bool: True si exitoso, False en caso contrario
-    """
     conexion.recv(BUFFER_SIZE)  # Descartar el prompt "Usuario: " del servidor
 
     # Solicitar credenciales
@@ -99,12 +69,6 @@ def iniciar_sesion(conexion):
         return False
 
 def registrar_usuario(conexion):
-    """
-    Registra un nuevo usuario en el servidor.
-    
-    Args:
-        conexion (socket): Conexión SSL con el servidor
-    """
     nuevo_usuario = input("Nuevo usuario: ")
     nueva_password = input_password("Nueva contraseña: ")
 

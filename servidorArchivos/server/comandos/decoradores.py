@@ -1,9 +1,3 @@
-"""
-Decoradores para el sistema de comandos.
-
-Este módulo contiene decoradores utilizados para validar argumentos
-y verificar permisos en los comandos del servidor de archivos.
-"""
 
 import os
 import sys
@@ -23,18 +17,6 @@ NIVELES_PERMISOS = {
 
 # Decorador para validar argumentos
 def validar_argumentos(num_args=None, min_args=None, max_args=None, mensaje_error=None):
-    """
-    Decorador que valida el número de argumentos de un comando.
-
-    Args:
-        num_args (int, optional): Número exacto de argumentos requeridos.
-        min_args (int, optional): Número mínimo de argumentos requeridos.
-        max_args (int, optional): Número máximo de argumentos permitidos.
-        mensaje_error (str, optional): Mensaje de error personalizado.
-
-    Returns:
-        function: Decorador configurado.
-    """
     def decorador(func):
         @wraps(func)
         def wrapper(partes, *args, **kwargs):
@@ -56,16 +38,6 @@ def validar_argumentos(num_args=None, min_args=None, max_args=None, mensaje_erro
 
 # Función para verificar si un usuario tiene un nivel de permiso específico
 def _tiene_permiso(usuario_id, nivel_requerido):
-    """
-    Verifica si un usuario tiene el nivel de permiso requerido o superior.
-
-    Args:
-        usuario_id (int): ID del usuario
-        nivel_requerido (str): Nivel de permiso requerido ('lectura', 'escritura', 'admin')
-
-    Returns:
-        bool: True si el usuario tiene el permiso requerido, False en caso contrario
-    """
     if not usuario_id:
         return False
 
@@ -93,15 +65,6 @@ def _tiene_permiso(usuario_id, nivel_requerido):
 
 # Decorador para verificar permisos
 def requiere_permiso(nivel_requerido):
-    """
-    Decorador que verifica si un usuario tiene el nivel de permiso requerido.
-
-    Args:
-        nivel_requerido (str): Nivel de permiso requerido ('lectura', 'escritura', 'admin')
-
-    Returns:
-        function: Decorador que verifica permisos
-    """
     def decorador(func):
         @wraps(func)
         def wrapper(partes, directorio_base, usuario_id=None, *args, **kwargs):

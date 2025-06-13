@@ -1,9 +1,3 @@
-"""
-Módulo principal del cliente para el servidor de archivos.
-
-Este módulo contiene la función principal que inicia el cliente y coordina
-todas las operaciones con el servidor de archivos.
-"""
 
 import os
 import sys
@@ -22,16 +16,6 @@ from .autenticacion import manejar_autenticacion
 from .procesador_comandos import procesar_comandos
 
 def iniciar_cliente(host, port):
-    """
-    Inicia el cliente y conecta al servidor en host:port.
-    
-    Args:
-        host (str): Dirección del servidor
-        port (int): Puerto del servidor
-        
-    Returns:
-        None
-    """
     logger.info(f"🌐 Iniciando cliente para conectar a {host}:{port}")
 
     # Verificar el certificado del servidor antes de conectar

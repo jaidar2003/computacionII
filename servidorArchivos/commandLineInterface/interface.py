@@ -1,4 +1,4 @@
-# cli/interface.py
+# commandLineInterface/interface.py
 
 def mostrar_banner():
     print("\n\033[1;36m" + "\u2554" + "\u2550"*50 + "\u2557\033[0m")

@@ -4,6 +4,7 @@ import threading
 import logging
 import os
 import sys
+import argparse
 from dotenv import load_dotenv
 
 # Configuración básica
@@ -19,12 +20,11 @@ except ImportError:
     from seguridad import autenticar_usuario_en_servidor, registrar_usuario
 
 from baseDeDatos.db import log_evento
-load_dotenv()
+from utils.config import SERVIDOR_HOST, SERVIDOR_PORT, SERVIDOR_DIR, CERT_PATH, KEY_PATH
+from utils.config import crear_directorio_si_no_existe, configurar_argumentos
+from utils.network import crear_socket_servidor, configurar_contexto_ssl
 
-# Configuración del servidor
-SERVIDOR_HOST = os.getenv("SERVIDOR_HOST", "127.0.0.1")
-SERVIDOR_PORT = int(os.getenv("SERVIDOR_PORT", 1608))
-DIRECTORIO_BASE = os.getenv("SERVIDOR_DIR", "archivos")
+load_dotenv()
 
 # Configuración de logging
 log_dir = os.path.join(os.path.dirname(os.path.dirname(__file__)), "historial")
@@ -38,7 +38,6 @@ logging.basicConfig(
 )
 
 def manejar_cliente(conexion_ssl, direccion, directorio):
-    """🧑‍💻 Maneja conexión, autenticación y comandos de un cliente"""
     try:
         # 👋 Enviar mensaje de bienvenida
         _enviar_mensaje(conexion_ssl, "🌍 Bienvenido al servidor de archivos seguro.\n")
@@ -56,17 +55,14 @@ def manejar_cliente(conexion_ssl, direccion, directorio):
         logging.info(f"🔌 Cliente {direccion} desconectado")
 
 def _enviar_mensaje(conexion, mensaje):
-    """Envía mensaje al cliente"""
     conexion.sendall(mensaje.encode('utf-8'))
 
 def _recibir_mensaje(conexion, prompt=None):
-    """Recibe mensaje del cliente, opcionalmente con prompt"""
     if prompt:
         _enviar_mensaje(conexion, prompt)
     return conexion.recv(1024).decode().strip()
 
 def _autenticar_usuario(conexion):
-    """🔑 Maneja autenticación o registro. Retorna (usuario_id, permisos)"""
     while True:
         usuario = _recibir_mensaje(conexion, "👤 Usuario: ")
 
@@ -88,7 +84,6 @@ def _autenticar_usuario(conexion):
         return usuario_id, permisos
 
 def _manejar_registro(conexion, comando_registro):
-    """📝 Procesa comando de registro de nuevo usuario"""
     partes = comando_registro.split()
     if len(partes) != 3:
         _enviar_mensaje(conexion, "❌ Formato incorrecto. Usa: REGISTRAR usuario contraseña\n")
@@ -102,7 +97,6 @@ def _manejar_registro(conexion, comando_registro):
         _enviar_mensaje(conexion, "👤 Ahora inicia sesión con tu nuevo usuario.\n")
 
 def _procesar_comandos(conexion, directorio, usuario_id):
-    """💻 Procesa comandos del usuario autenticado"""
     while True:
         comando = _recibir_mensaje(conexion, "\n💻 Ingresar comando ('SALIR' para desconectar): ")
 
@@ -120,32 +114,17 @@ def _procesar_comandos(conexion, directorio, usuario_id):
         _enviar_mensaje(conexion, f"📄 {respuesta}\n")
 
 
-def iniciar_servidor(host=SERVIDOR_HOST, port=SERVIDOR_PORT, directorio=DIRECTORIO_BASE):
-    """🚀 Inicia el servidor en host:port usando el directorio especificado"""
+def iniciar_servidor(host=SERVIDOR_HOST, port=SERVIDOR_PORT, directorio=SERVIDOR_DIR):
     # Asegurar que el directorio existe
-    if not os.path.exists(directorio):
-        os.makedirs(directorio)
-        logging.info(f"📁 Directorio creado: {directorio}")
+    crear_directorio_si_no_existe(directorio)
 
     try:
         # Configurar socket para soportar IPv4 e IPv6
-        addr_info = socket.getaddrinfo(host, port, socket.AF_UNSPEC, socket.SOCK_STREAM)
-        family, socktype, proto, canonname, sockaddr = addr_info[0]
-
-        servidor = socket.socket(family, socktype, proto)
-        servidor.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
-        servidor.bind(sockaddr)
-        servidor.listen(5)
-
-        logging.info(f"✅ Servidor iniciado en {host}:{port}")
+        servidor = crear_socket_servidor(host, port)
         print(f"🌍 Servidor de Archivos Seguro escuchando en {host}:{port}")
 
         # Configurar SSL
-        contexto = ssl.create_default_context(ssl.Purpose.CLIENT_AUTH)
-        contexto.load_cert_chain(
-            certfile=os.path.join(os.path.dirname(os.path.dirname(__file__)), "certificados", "certificado.pem"),
-            keyfile=os.path.join(os.path.dirname(os.path.dirname(__file__)), "certificados", "llave.pem")
-        )
+        contexto = configurar_contexto_ssl(CERT_PATH, KEY_PATH)
 
         # Aceptar conexiones
         while True:
@@ -177,41 +156,7 @@ def iniciar_servidor(host=SERVIDOR_HOST, port=SERVIDOR_PORT, directorio=DIRECTOR
         if 'servidor' in locals():
             servidor.close()
 
-def _configurar_argumentos():
-    """📋 Configura argumentos de línea de comandos"""
-    parser = argparse.ArgumentParser(
-        description='🔐 Servidor de Archivos Seguro',
-        formatter_class=argparse.ArgumentDefaultsHelpFormatter
-    )
-
-    parser.add_argument(
-        '-H', '--host', 
-        type=str, 
-        default=SERVIDOR_HOST,
-        help='Dirección IP donde escuchar'
-    )
-
-    parser.add_argument(
-        '-p', '--port', 
-        type=int, 
-        default=SERVIDOR_PORT,
-        help='Puerto donde escuchar'
-    )
-
-    parser.add_argument(
-        '-d', '--directorio', 
-        type=str, 
-        default=DIRECTORIO_BASE,
-        help='Directorio base para archivos'
-    )
-
-    parser.add_argument(
-        '-v', '--verbose', 
-        action='store_true',
-        help='Mostrar logs detallados'
-    )
-
-    return parser.parse_args()
+# La función configurar_argumentos se ha movido a utils/config.py
 
 if __name__ == "__main__":
     # 📋 Verificar que los módulos se importaron correctamente
@@ -219,7 +164,7 @@ if __name__ == "__main__":
     print("✅ Importación de comandos, seguridad y baseDeDatos.db exitosa.")
 
     # 🔧 Configurar argumentos
-    args = _configurar_argumentos()
+    args = configurar_argumentos(modo_dual=False)
 
     # 📝 Configurar nivel de logging si es verbose
     if args.verbose:

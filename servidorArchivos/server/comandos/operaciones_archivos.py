@@ -1,11 +1,3 @@
-"""
-Operaciones con archivos del servidor.
-
-Este módulo contiene todas las funciones relacionadas con operaciones
-de archivos en el servidor, como listar, crear, eliminar, renombrar,
-descargar y verificar archivos.
-"""
-
 import os
 import sys
 import socket
@@ -18,15 +10,6 @@ from baseDeDatos.db import obtener_conexion
 from .utilidades import _enviar_mensaje
 
 def listar_archivos(directorio_base):
-    """
-    Lista todos los archivos en el directorio base.
-
-    Args:
-        directorio_base (str): Directorio base para operaciones con archivos
-
-    Returns:
-        str: Lista formateada de archivos o mensaje de error
-    """
     try:
         archivos = os.listdir(directorio_base)
         if not archivos:
@@ -39,18 +22,6 @@ def listar_archivos(directorio_base):
         return f"❌ Error al listar archivos: {error}"
 
 def crear_archivo(directorio_base, nombre_archivo, hash_esperado=None, conexion=None):
-    """
-    Crea un archivo en el servidor, opcionalmente recibiendo su contenido.
-
-    Args:
-        directorio_base (str): Directorio base para operaciones con archivos
-        nombre_archivo (str): Nombre del archivo a crear
-        hash_esperado (str, optional): Hash esperado para verificación de integridad
-        conexion (socket, optional): Conexión para recibir el contenido del archivo
-
-    Returns:
-        str: Mensaje de resultado de la operación
-    """
     try:
         # Validar nombre de archivo
         if not _es_nombre_archivo_valido(nombre_archivo):
@@ -112,16 +83,6 @@ def crear_archivo(directorio_base, nombre_archivo, hash_esperado=None, conexion=
         return f"❌ Error al crear archivo: {error}"
 
 def eliminar_archivo(directorio_base, nombre_archivo):
-    """
-    Elimina un archivo del servidor.
-
-    Args:
-        directorio_base (str): Directorio base para operaciones con archivos
-        nombre_archivo (str): Nombre del archivo a eliminar
-
-    Returns:
-        str: Mensaje de resultado de la operación
-    """
     try:
         # Validar nombre de archivo
         if not _es_nombre_archivo_valido(nombre_archivo):
@@ -141,17 +102,6 @@ def eliminar_archivo(directorio_base, nombre_archivo):
         return f"❌ Error al eliminar archivo: {error}"
 
 def renombrar_archivo(directorio_base, nombre_viejo, nombre_nuevo):
-    """
-    Renombra un archivo en el servidor.
-
-    Args:
-        directorio_base (str): Directorio base para operaciones con archivos
-        nombre_viejo (str): Nombre actual del archivo
-        nombre_nuevo (str): Nuevo nombre para el archivo
-
-    Returns:
-        str: Mensaje de resultado de la operación
-    """
     try:
         # Validar nombres de archivo
         if not _es_nombre_archivo_valido(nombre_viejo) or not _es_nombre_archivo_valido(nombre_nuevo):
@@ -176,41 +126,14 @@ def renombrar_archivo(directorio_base, nombre_viejo, nombre_nuevo):
         return f"❌ Error al renombrar archivo: {error}"
 
 def _es_nombre_archivo_valido(nombre):
-    """
-    Verifica si un nombre de archivo es válido.
-
-    Args:
-        nombre (str): Nombre de archivo a validar
-
-    Returns:
-        bool: True si el nombre es válido, False en caso contrario
-    """
     # Caracteres prohibidos en nombres de archivo
     caracteres_prohibidos = ['/', '\\', ':', '*', '?', '"', '<', '>', '|']
     return not any(c in nombre for c in caracteres_prohibidos)
 
 def _iniciar_verificacion(ruta, hash_esperado=None):
-    """
-    Inicia la verificación de integridad y antivirus de un archivo.
-
-    Args:
-        ruta (str): Ruta completa al archivo
-        hash_esperado (str, optional): Hash esperado para verificación de integridad
-    """
     verificar_integridad_y_virus.delay(ruta, hash_esperado)
 
 def descargar_archivo(directorio_base, nombre_archivo, conexion=None):
-    """
-    Envía un archivo al cliente para su descarga.
-
-    Args:
-        directorio_base (str): Directorio base para operaciones con archivos
-        nombre_archivo (str): Nombre del archivo a descargar
-        conexion (socket, optional): Conexión para enviar el contenido del archivo
-
-    Returns:
-        str: Mensaje de resultado de la operación
-    """
     try:
         # Validar nombre de archivo
         if not _es_nombre_archivo_valido(nombre_archivo):
@@ -271,16 +194,6 @@ def descargar_archivo(directorio_base, nombre_archivo, conexion=None):
         return f"❌ Error al descargar archivo: {error}"
 
 def verificar_estado_archivo(directorio_base, nombre_archivo):
-    """
-    Verifica el estado de un archivo (integridad y antivirus).
-
-    Args:
-        directorio_base (str): Directorio base para operaciones con archivos
-        nombre_archivo (str): Nombre del archivo a verificar
-
-    Returns:
-        str: Mensaje con el estado de verificación del archivo
-    """
     try:
         # Validar nombre de archivo
         if not _es_nombre_archivo_valido(nombre_archivo):
