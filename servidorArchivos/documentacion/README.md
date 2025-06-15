@@ -66,12 +66,12 @@ python servidorArchivos/main.py -p 5000 -H 127.0.0.1 -d archivos -v
 ### 5️⃣ **Ejecutar el Cliente**
 
 ```bash
-python servidorArchivos/commandLineInterface/cliente.py
+python servidorArchivos/cli/cliente.py
 ```
 
 Para opciones adicionales:
 ```bash
-python servidorArchivos/commandLineInterface/cliente.py -s 127.0.0.1 -p 5000
+python servidorArchivos/cli/cliente.py -s 127.0.0.1 -p 5000
 ```
 
 ### 6️⃣ **Ejecutar el Worker de Celery**

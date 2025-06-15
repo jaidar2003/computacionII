@@ -17,9 +17,9 @@ sys.path.append(os.path.abspath(os.path.dirname(__file__)))
 # 📚 Importaciones de módulos propios
 from server.servidor import manejar_cliente
 from baseDeDatos.db import crear_tablas
-from commandLineInterface.cliente import iniciar_cliente
+from cli.cliente import iniciar_cliente
 from utils.config import verificar_configuracion_env, crear_directorio_si_no_existe, configurar_argumentos
-from utils.config import SERVIDOR_HOST, SERVIDOR_PORT, SERVIDOR_DIR, CERT_PATH, KEY_PATH
+from utils.config import CERT_PATH, KEY_PATH
 from utils.network import crear_socket_servidor, configurar_contexto_ssl
 
 # 📝 Configurar logging
@@ -31,7 +31,11 @@ verificar_configuracion_env()
 # ⚙️ Crear tablas si no existen
 crear_tablas()
 
-def iniciar_servidor_ssl(host=SERVIDOR_HOST, port=SERVIDOR_PORT, directorio=SERVIDOR_DIR):
+def iniciar_servidor_ssl(host=None, port=None, directorio=None):
+    # Usar valores predeterminados si no se proporcionan
+    host = host or os.getenv("SERVIDOR_HOST", "127.0.0.1")
+    port = port or int(os.getenv("SERVIDOR_PORT", 1608))
+    directorio = directorio or os.getenv("SERVIDOR_DIR", "archivos")
     # 📂 Asegurar que el directorio de archivos exista
     crear_directorio_si_no_existe(directorio)
 

@@ -143,7 +143,6 @@ def autenticar_usuario(username, password):
         # Importar verificar_password en tiempo de ejecución para evitar importación circular
         from server.seguridad import verificar_password
         if user and verificar_password(password, user[1]):
-            logger.info(f"✅ Usuario {username} autenticado correctamente")
             return (user[0], user[2])  # (id, permisos)
 
         logger.warning(f"❌ Intento de autenticación fallido para el usuario {username}")

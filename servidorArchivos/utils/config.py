@@ -11,10 +11,6 @@ BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 CERT_PATH = os.path.join(BASE_DIR, "certificados", "certificado.pem")
 KEY_PATH = os.path.join(BASE_DIR, "certificados", "llave.pem")
 
-# Configuración del servidor desde variables de entorno
-SERVIDOR_HOST = os.getenv("SERVIDOR_HOST", "127.0.0.1")
-SERVIDOR_PORT = int(os.getenv("SERVIDOR_PORT", 1608))
-SERVIDOR_DIR = os.getenv("SERVIDOR_DIR", "archivos")
 
 def crear_directorio_si_no_existe(directorio):
     if not os.path.exists(directorio):
@@ -79,21 +75,21 @@ def configurar_argumentos(modo_dual=False):
     parser.add_argument(
         '-H', '--host', 
         type=str, 
-        default=SERVIDOR_HOST,
+        default=os.getenv("SERVIDOR_HOST", "127.0.0.1"),
         help='Dirección IP del servidor'
     )
 
     parser.add_argument(
         '-p', '--port', 
         type=int, 
-        default=SERVIDOR_PORT,
+        default=int(os.getenv("SERVIDOR_PORT", 1608)),
         help='Puerto del servidor'
     )
 
     parser.add_argument(
         '-d', '--directorio', 
         type=str, 
-        default=SERVIDOR_DIR,
+        default=os.getenv("SERVIDOR_DIR", "archivos"),
         help='Directorio base para archivos'
     )
 

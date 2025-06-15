@@ -20,7 +20,7 @@ except ImportError:
     from seguridad import autenticar_usuario_en_servidor, registrar_usuario
 
 from baseDeDatos.db import log_evento
-from utils.config import SERVIDOR_HOST, SERVIDOR_PORT, SERVIDOR_DIR, CERT_PATH, KEY_PATH
+from utils.config import CERT_PATH, KEY_PATH
 from utils.config import crear_directorio_si_no_existe, configurar_argumentos
 from utils.network import crear_socket_servidor, configurar_contexto_ssl
 
@@ -114,7 +114,11 @@ def _procesar_comandos(conexion, directorio, usuario_id):
         _enviar_mensaje(conexion, f"📄 {respuesta}\n")
 
 
-def iniciar_servidor(host=SERVIDOR_HOST, port=SERVIDOR_PORT, directorio=SERVIDOR_DIR):
+def iniciar_servidor(host=None, port=None, directorio=None):
+    # Usar valores predeterminados si no se proporcionan
+    host = host or os.getenv("SERVIDOR_HOST", "127.0.0.1")
+    port = port or int(os.getenv("SERVIDOR_PORT", 1608))
+    directorio = directorio or os.getenv("SERVIDOR_DIR", "archivos")
     # Asegurar que el directorio existe
     crear_directorio_si_no_existe(directorio)
 
