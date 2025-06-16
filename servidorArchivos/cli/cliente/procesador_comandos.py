@@ -263,6 +263,9 @@ def procesar_comando_crear(comando, conexion):
         # Si llegamos aquí, el archivo existe, continuamos con el proceso
         break
 
+    # Extraer solo el nombre base del archivo (sin la ruta)
+    nombre_base = os.path.basename(ruta_archivo)
+
     # Calcular hash del archivo
     hash_archivo = calcular_hash_archivo(ruta_archivo)
     if not hash_archivo:
@@ -271,7 +274,8 @@ def procesar_comando_crear(comando, conexion):
 
     # Modificar el comando para incluir el hash
     # Usamos comillas para manejar espacios en el nombre del archivo
-    comando_modificado = f'{accion} "{nombre_archivo}" {hash_archivo}'
+    # y enviamos solo el nombre base, no la ruta completa
+    comando_modificado = f'{accion} "{nombre_base}" {hash_archivo}'
 
     # Enviar comando al servidor
     print(MENSAJE_ENVIO_HASH)
@@ -318,7 +322,7 @@ def procesar_comando_crear(comando, conexion):
         print(respuesta)
 
         # Verificar estado del archivo (integridad y antivirus)
-        verificar_estado_archivo(conexion, nombre_archivo)
+        verificar_estado_archivo(conexion, nombre_base)
 
     except Exception as e:
         print(f"{ANSI_ROJO}❌ Error al enviar el archivo: {e}{ANSI_RESET}")
