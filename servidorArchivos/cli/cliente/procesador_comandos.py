@@ -27,7 +27,7 @@ def procesar_comandos(conexion):
         comando = input(prompt)
 
         # Procesar comando especial SUBIR para añadir hash y enviar contenido
-        if comando.upper().startswith("SUBIR "):
+        if comando.upper().startswith("SUBIR"):
             comando = procesar_comando_crear(comando, conexion)
             # Si el comando es None, ya se manejó la respuesta
             if comando is None:
@@ -182,12 +182,15 @@ def procesar_comando_descargar(comando, conexion):
 def procesar_comando_crear(comando, conexion):
 
     partes = comando.split()
+    accion = partes[0].upper()
+
+    # Si no se proporcionó un nombre de archivo, solicitar uno
     if len(partes) < 2:
         print(f"{ANSI_ROJO}❌ Formato incorrecto. Uso: SUBIR nombre_archivo{ANSI_RESET}")
-        return comando
-
-    accion = partes[0].upper()
-    nombre_archivo = partes[1]
+        # Solicitar nombre de archivo directamente
+        nombre_archivo = input("Ingrese el nombre del archivo: ")
+    else:
+        nombre_archivo = partes[1]
 
     # Bucle para reintentar si el archivo no existe
     while True:
