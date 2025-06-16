@@ -26,8 +26,8 @@ def procesar_comandos(conexion):
         prompt = conexion.recv(BUFFER_SIZE).decode('utf-8')
         comando = input(prompt)
 
-        # Procesar comando especial CREAR para añadir hash y enviar contenido
-        if comando.upper().startswith("CREAR ") or comando.upper().startswith("SUBIR "):
+        # Procesar comando especial SUBIR para añadir hash y enviar contenido
+        if comando.upper().startswith("SUBIR "):
             comando = procesar_comando_crear(comando, conexion)
             # Si el comando es None, ya se manejó la respuesta
             if comando is None:
@@ -183,15 +183,11 @@ def procesar_comando_crear(comando, conexion):
 
     partes = comando.split()
     if len(partes) < 2:
-        print(f"{ANSI_ROJO}❌ Formato incorrecto. Uso: CREAR/SUBIR nombre_archivo{ANSI_RESET}")
+        print(f"{ANSI_ROJO}❌ Formato incorrecto. Uso: SUBIR nombre_archivo{ANSI_RESET}")
         return comando
 
     accion = partes[0].upper()
     nombre_archivo = partes[1]
-
-    # Verificar si es un comando para crear un archivo vacío
-    if accion == "CREAR" and len(partes) == 2:
-        return comando  # No modificar el comando
 
     # Bucle para reintentar si el archivo no existe
     while True:
