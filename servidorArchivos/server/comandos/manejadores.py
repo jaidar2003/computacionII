@@ -28,22 +28,30 @@ def _cmd_listar_archivos(partes, directorio_base, usuario_id=None):
 @validar_argumentos(min_args=1, max_args=2, 
                    mensaje_error="❌ Formato incorrecto. Usa: CREAR nombre_archivo [hash]")
 def _cmd_crear_archivo(partes, directorio_base, usuario_id=None, conexion=None):
+    # Extraer el nombre del archivo (puede contener espacios si está entre comillas)
+    nombre_archivo = partes[1]
+
     if len(partes) == 2:
-        return crear_archivo(directorio_base, partes[1], None, conexion)
+        return crear_archivo(directorio_base, nombre_archivo, None, conexion)
     else:  # len(partes) == 3
-        return crear_archivo(directorio_base, partes[1], partes[2], conexion)
+        return crear_archivo(directorio_base, nombre_archivo, partes[2], conexion)
 
 @requiere_permiso('escritura')
 @validar_argumentos(num_args=1, 
                    mensaje_error="❌ Formato incorrecto. Usa: ELIMINAR nombre_archivo")
 def _cmd_eliminar_archivo(partes, directorio_base, usuario_id=None):
-    return eliminar_archivo(directorio_base, partes[1])
+    # Extraer el nombre del archivo (puede contener espacios si está entre comillas)
+    nombre_archivo = partes[1]
+    return eliminar_archivo(directorio_base, nombre_archivo)
 
 @requiere_permiso('escritura')
 @validar_argumentos(num_args=2, 
                    mensaje_error="❌ Formato incorrecto. Usa: RENOMBRAR nombre_viejo nombre_nuevo")
 def _cmd_renombrar_archivo(partes, directorio_base, usuario_id=None):
-    return renombrar_archivo(directorio_base, partes[1], partes[2])
+    # Extraer los nombres de los archivos (pueden contener espacios si están entre comillas)
+    nombre_viejo = partes[1]
+    nombre_nuevo = partes[2]
+    return renombrar_archivo(directorio_base, nombre_viejo, nombre_nuevo)
 
 @requiere_permiso('lectura')
 @validar_argumentos(num_args=1, 
@@ -68,6 +76,7 @@ def _cmd_verificar_archivo(partes, directorio_base, usuario_id=None):
     if len(partes) != 2:
         return "❌ Uso: VERIFICAR [archivo]"
 
+    # Extraer el nombre del archivo (puede contener espacios si está entre comillas)
     nombre_archivo = partes[1]
     return verificar_estado_archivo(directorio_base, nombre_archivo)
 
@@ -75,7 +84,9 @@ def _cmd_verificar_archivo(partes, directorio_base, usuario_id=None):
 @validar_argumentos(num_args=1, 
                    mensaje_error="❌ Formato incorrecto. Usa: DESCARGAR nombre_archivo")
 def _cmd_descargar_archivo(partes, directorio_base, usuario_id=None, conexion=None):
-    return descargar_archivo(directorio_base, partes[1], conexion)
+    # Extraer el nombre del archivo (puede contener espacios si está entre comillas)
+    nombre_archivo = partes[1]
+    return descargar_archivo(directorio_base, nombre_archivo, conexion)
 
 @requiere_permiso('admin')
 @validar_argumentos(num_args=0, 

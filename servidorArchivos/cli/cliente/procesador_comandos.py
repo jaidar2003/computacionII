@@ -38,6 +38,48 @@ def procesar_comandos(conexion):
             procesar_comando_descargar(comando, conexion)
             continue
 
+        # Procesar comandos que pueden contener rutas de archivo con espacios
+        elif comando.upper().startswith("ELIMINAR ") or comando.upper().startswith("RENOMBRAR ") or comando.upper().startswith("VERIFICAR "):
+            # Extraer el comando base y los argumentos
+            partes = comando.split(maxsplit=1)
+            cmd_base = partes[0].upper()
+            args = partes[1] if len(partes) > 1 else ""
+
+            # Para RENOMBRAR, necesitamos manejar dos nombres de archivo
+            if cmd_base == "RENOMBRAR":
+                # Intentar dividir respetando comillas si están presentes
+                import shlex
+                try:
+                    arg_partes = shlex.split(args)
+                except ValueError:
+                    # Si hay error en el parsing, dividir por el primer espacio
+                    arg_idx = args.find(" ")
+                    if arg_idx > 0:
+                        arg_partes = [args[:arg_idx], args[arg_idx+1:]]
+                    else:
+                        arg_partes = [args]
+
+                if len(arg_partes) >= 2:
+                    # Usar comillas para manejar espacios
+                    comando_modificado = f'{cmd_base} "{arg_partes[0]}" "{arg_partes[1]}"'
+                    enviar_comando(conexion, comando_modificado)
+                else:
+                    # Si no hay suficientes argumentos, enviar el comando original
+                    enviar_comando(conexion, comando)
+            else:
+                # Para ELIMINAR y VERIFICAR, solo un nombre de archivo
+                if args:
+                    # Usar comillas para manejar espacios
+                    comando_modificado = f'{cmd_base} "{args}"'
+                    enviar_comando(conexion, comando_modificado)
+                else:
+                    # Si no hay argumentos, enviar el comando original
+                    enviar_comando(conexion, comando)
+
+            respuesta = conexion.recv(BUFFER_SIZE).decode('utf-8')
+            print(respuesta)
+            continue
+
         # Procesar comando SALIR
         elif comando.upper() == "SALIR":
             enviar_comando(conexion, comando)
@@ -59,8 +101,8 @@ def verificar_estado_archivo(conexion, nombre_archivo, max_intentos=3, espera_en
     print(MENSAJE_VERIFICANDO)
 
     for intento in range(max_intentos):
-        # Enviar comando de verificación
-        enviar_comando(conexion, f"VERIFICAR {nombre_archivo}")
+        # Enviar comando de verificación (con comillas para manejar espacios)
+        enviar_comando(conexion, f'VERIFICAR "{nombre_archivo}"')
 
         # Recibir respuesta
         respuesta = conexion.recv(BUFFER_SIZE).decode('utf-8')
@@ -96,16 +138,18 @@ def verificar_estado_archivo(conexion, nombre_archivo, max_intentos=3, espera_en
     return verificacion_completa, integridad_ok, antivirus_ok
 
 def procesar_comando_descargar(comando, conexion):
-
-    partes = comando.split()
-    if len(partes) != 2:
+    # Extraer el nombre del archivo (puede contener espacios)
+    if not comando.upper().startswith("DESCARGAR "):
         print(f"{ANSI_ROJO}❌ Formato incorrecto. Uso: DESCARGAR nombre_archivo{ANSI_RESET}")
         return
 
-    nombre_archivo = partes[1]
+    nombre_archivo = comando[10:].strip()
+    if not nombre_archivo:
+        print(f"{ANSI_ROJO}❌ Formato incorrecto. Uso: DESCARGAR nombre_archivo{ANSI_RESET}")
+        return
 
-    # Enviar comando al servidor
-    enviar_comando(conexion, comando)
+    # Enviar comando al servidor (con comillas para manejar espacios)
+    enviar_comando(conexion, f'DESCARGAR "{nombre_archivo}"')
 
     # Recibir respuesta inicial
     respuesta = conexion.recv(BUFFER_SIZE).decode('utf-8')
@@ -180,34 +224,40 @@ def procesar_comando_descargar(comando, conexion):
             pass
 
 def procesar_comando_crear(comando, conexion):
-
-    partes = comando.split()
-    accion = partes[0].upper()
+    # Extraer la acción (SUBIR) y la ruta del archivo
+    if comando.upper().startswith("SUBIR "):
+        accion = "SUBIR"
+        # Extraer todo después de "SUBIR " como la ruta del archivo
+        nombre_archivo = comando[6:].strip()
+    else:
+        partes = comando.split()
+        accion = partes[0].upper()
+        nombre_archivo = ""
 
     # Si no se proporcionó un nombre de archivo, solicitar uno
-    if len(partes) < 2:
-        print(f"{ANSI_ROJO}❌ Formato incorrecto. Uso: SUBIR nombre_archivo{ANSI_RESET}")
-        # Solicitar nombre de archivo directamente
-        nombre_archivo = input("Ingrese el nombre del archivo: ")
-    else:
-        nombre_archivo = partes[1]
+    if not nombre_archivo:
+        print(f"{ANSI_ROJO}❌ Formato incorrecto. Uso: SUBIR ruta_archivo{ANSI_RESET}")
+        # Solicitar ruta completa del archivo directamente
+        nombre_archivo = input("Ingrese la ruta completa del archivo que desea subir: ")
 
     # Bucle para reintentar si el archivo no existe
     while True:
-        # Verificar si el archivo existe
-        ruta_archivo = os.path.join(DIRECTORIO_BASE, nombre_archivo)
-        if not os.path.exists(ruta_archivo):
-            ruta_archivo = nombre_archivo  # Intentar con ruta relativa
+        # Verificar si el archivo existe (primero como ruta completa)
+        if os.path.exists(nombre_archivo):
+            ruta_archivo = nombre_archivo
+        else:
+            # Intentar en el directorio base
+            ruta_archivo = os.path.join(DIRECTORIO_BASE, nombre_archivo)
             if not os.path.exists(ruta_archivo):
-                print(f"{ANSI_ROJO}❌ No se encontró el archivo '{nombre_archivo}'{ANSI_RESET}")
+                print(f"{ANSI_ROJO}❌ No se encontró el archivo en '{nombre_archivo}'{ANSI_RESET}")
 
                 # Preguntar al usuario si desea intentar con otro archivo
                 respuesta = input("¿Desea intentar con otro archivo? (s/n): ").lower()
                 if respuesta != 's':
                     return None  # El usuario no quiere reintentar
 
-                # Solicitar nuevo nombre de archivo
-                nombre_archivo = input("Ingrese el nombre del archivo: ")
+                # Solicitar nueva ruta de archivo
+                nombre_archivo = input("Ingrese la ruta completa del archivo que desea subir: ")
                 continue  # Volver al inicio del bucle para verificar el nuevo archivo
 
         # Si llegamos aquí, el archivo existe, continuamos con el proceso
@@ -220,7 +270,8 @@ def procesar_comando_crear(comando, conexion):
         return None
 
     # Modificar el comando para incluir el hash
-    comando_modificado = f"{accion} {nombre_archivo} {hash_archivo}"
+    # Usamos comillas para manejar espacios en el nombre del archivo
+    comando_modificado = f'{accion} "{nombre_archivo}" {hash_archivo}'
 
     # Enviar comando al servidor
     print(MENSAJE_ENVIO_HASH)

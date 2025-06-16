@@ -36,7 +36,15 @@ COMANDOS = {
 }
 
 def manejar_comando(comando, directorio_base, usuario_id=None, conexion=None):
-    partes = comando.strip().split()
+    # Dividir el comando respetando las comillas
+    import shlex
+    try:
+        partes = shlex.split(comando.strip())
+    except ValueError:
+        # Si hay un error al dividir (por ejemplo, comillas sin cerrar)
+        # Caer en el método tradicional
+        partes = comando.strip().split()
+
     if not partes:
         return "❌ Comando vacío."
 

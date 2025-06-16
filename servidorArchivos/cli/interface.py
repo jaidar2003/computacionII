@@ -16,7 +16,7 @@ def mostrar_menu_principal():
 def mostrar_comandos_disponibles(permisos):
     print("\n\033[1;34mComandos disponibles:\033[0m")
     print("  - LISTAR")
-    print("  - SUBIR [archivo]")
+    print("  - SUBIR [ruta_archivo]")
     print("  - DESCARGAR [archivo]")
     print("  - ELIMINAR [archivo]")
     print("  - RENOMBRAR [viejo] [nuevo]")
