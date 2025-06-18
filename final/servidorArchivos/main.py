@@ -105,7 +105,40 @@ def _crear_proceso_simulado(mensaje):
 
 def _obtener_ruta_celery():
     import shutil
-    return os.getenv("CELERY_PATH", shutil.which("celery")) or "celery"
+
+    # 1. Intentar obtener la ruta de la variable de entorno
+    celery_path = os.getenv("CELERY_PATH")
+    if celery_path and os.path.exists(celery_path):
+        return celery_path
+
+    # 2. Buscar en el entorno virtual actual (.venv)
+    # Determinar la ruta según el sistema operativo
+    base_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+
+    # Rutas posibles para diferentes entornos virtuales y sistemas operativos
+    posibles_rutas = [
+        # .venv (punto al inicio)
+        os.path.join(base_dir, ".venv", "bin", "celery"),                # Unix/Mac
+        os.path.join(base_dir, ".venv", "Scripts", "celery.exe"),        # Windows
+        os.path.join(base_dir, ".venv", "Scripts", "celery"),            # Windows (sin extensión)
+        # venv (sin punto)
+        os.path.join(base_dir, "venv", "bin", "celery"),                 # Unix/Mac
+        os.path.join(base_dir, "venv", "Scripts", "celery.exe"),         # Windows
+        os.path.join(base_dir, "venv", "Scripts", "celery"),             # Windows (sin extensión)
+    ]
+
+    # Verificar cada ruta posible
+    for ruta in posibles_rutas:
+        if os.path.exists(ruta):
+            return ruta
+
+    # 3. Buscar en el PATH del sistema
+    system_path = shutil.which("celery")
+    if system_path:
+        return system_path
+
+    # 4. Último recurso: usar "celery" (podría fallar si no está en el PATH)
+    return "celery"
 
 def _iniciar_proceso_celery(celery_path, root_dir):
     # 🔇 Configurar para suprimir la mayoría de los mensajes

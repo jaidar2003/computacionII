@@ -27,7 +27,9 @@ from utils.network import crear_socket_servidor, configurar_contexto_ssl
 load_dotenv()
 
 # Configuración de logging
-log_dir = os.path.join(os.path.dirname(os.path.dirname(__file__)), "historial")
+# Configuración: Los logs se guardan en el directorio "historial" al mismo nivel que "servidorArchivos"
+base_dir = os.path.dirname(os.path.dirname(os.path.dirname(__file__)))  # Directorio "final"
+log_dir = os.path.join(base_dir, "historial")
 if not os.path.exists(log_dir):
     os.makedirs(log_dir)
 
