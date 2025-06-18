@@ -160,5 +160,5 @@ if __name__ == "__main__":
         _iniciar_modo_cliente(args)
 
 
-# python /Users/juanmaaidar/PycharmProjects/computacionII/servidorArchivos/main.py -m server
-# python /Users/juanmaaidar/PycharmProjects/computacionII/servidorArchivos/main.py -m cliente
+# python /Users/juanmaaidar/PycharmProjects/computacionII/final/servidorArchivos/main.py -m server
+# python /Users/juanmaaidar/PycharmProjects/computacionII/final/servidorArchivos/main.py -m cliente
