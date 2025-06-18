@@ -10,8 +10,8 @@ logger = logging.getLogger(__name__)
 
 # Importaciones de módulos propios
 from cli.utils import calcular_hash_archivo
-from cli.estilos import ANSI_VERDE, ANSI_RESET, ANSI_ROJO, ANSI_AMARILLO
-from cli.mensajes import (MENSAJE_ENVIO_HASH, MENSAJE_VERIFICANDO, MENSAJE_VERIFICACION_COMPLETA,
+from cli.ui.estilos import ANSI_VERDE, ANSI_RESET, ANSI_ROJO, ANSI_AMARILLO
+from cli.ui.mensajes import (MENSAJE_ENVIO_HASH, MENSAJE_VERIFICANDO, MENSAJE_VERIFICACION_COMPLETA,
                          MENSAJE_INTEGRIDAD_OK, MENSAJE_INTEGRIDAD_ERROR, MENSAJE_ANTIVIRUS_OK,
                          MENSAJE_ANTIVIRUS_ERROR, MENSAJE_VERIFICACION_PENDIENTE)
 from .utilidades import enviar_mensaje, enviar_comando

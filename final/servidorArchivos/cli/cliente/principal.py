@@ -10,7 +10,7 @@ load_dotenv()
 logger = logging.getLogger(__name__)
 
 # Importaciones de módulos propios
-from cli.interface import mostrar_banner
+from cli.ui.interface import mostrar_banner
 from .seguridad_ssl import verificar_certificado_servidor, establecer_conexion_ssl
 from .autenticacion import manejar_autenticacion
 from .procesador_comandos import procesar_comandos

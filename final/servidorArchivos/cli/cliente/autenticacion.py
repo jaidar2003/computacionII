@@ -8,10 +8,10 @@ sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '../..')
 logger = logging.getLogger(__name__)
 
 # Importaciones de módulos propios
-from cli.interface import mostrar_menu_principal, mostrar_comandos_disponibles
+from cli.ui.interface import mostrar_menu_principal, mostrar_comandos_disponibles
 from cli.utils import input_password
-from cli.estilos import ANSI_VERDE, ANSI_RESET, ANSI_ROJO
-from cli.mensajes import ERROR_CREDENCIALES_INVALIDAS, MENSAJE_DESCONECTAR
+from cli.ui.estilos import ANSI_VERDE, ANSI_RESET, ANSI_ROJO
+from cli.ui.mensajes import ERROR_CREDENCIALES_INVALIDAS, MENSAJE_DESCONECTAR
 from .utilidades import enviar_mensaje, enviar_comando
 
 # Constantes

@@ -10,7 +10,7 @@ sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '../..')
 logger = logging.getLogger(__name__)
 
 # Importaciones de módulos propios
-from cli.estilos import ANSI_VERDE, ANSI_RESET, ANSI_ROJO, ANSI_AMARILLO
+from cli.ui.estilos import ANSI_VERDE, ANSI_RESET, ANSI_ROJO, ANSI_AMARILLO
 
 # Constantes
 DIAS_AVISO_EXPIRACION = 30  # Días antes de expiración para mostrar advertencia
