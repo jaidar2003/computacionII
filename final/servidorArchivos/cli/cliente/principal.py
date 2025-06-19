@@ -41,7 +41,7 @@ def iniciar_cliente(host, port):
             print(f"\n{ANSI_AMARILLO}ℹ️ Para iniciar el servidor, ejecuta:{ANSI_RESET}")
             print(f"{ANSI_AMARILLO}   python main.py -m server{ANSI_RESET}")
             print(f"{ANSI_AMARILLO}   o{ANSI_RESET}")
-            print(f"{ANSI_AMARILLO}   python /Users/juanmaaidar/PycharmProjects/computacionII/final/servidorArchivos/main.py -m server{ANSI_RESET}\n")
+            print(f"{ANSI_AMARILLO}   python /home/juanma/PycharmProjects/computacionII/final/servidorArchivos/main.py -m server{ANSI_RESET}\n")
             return
 
         # Manejar autenticación del usuario

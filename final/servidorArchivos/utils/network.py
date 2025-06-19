@@ -7,19 +7,31 @@ def crear_socket_servidor(host, port, return_socket=True):
     # Obtener información de direcciones para IPv4 e IPv6
     addr_info = socket.getaddrinfo(host, port, socket.AF_UNSPEC, socket.SOCK_STREAM)
 
+    # Lista para almacenar los sockets creados exitosamente
+    sockets_creados = []
+
     # Intentar crear socket con cada familia de direcciones
     for family, socktype, proto, canonname, sockaddr in addr_info:
         try:
             servidor = socket.socket(family, socktype, proto)
             servidor.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
+
+            # En IPv6, habilitar la opción para permitir conexiones IPv4 e IPv6 en el mismo socket
+            if family == socket.AF_INET6:
+                servidor.setsockopt(socket.IPPROTO_IPV6, socket.IPV6_V6ONLY, 0)
+
             servidor.bind(sockaddr)
             servidor.listen(5)
 
             logging.info(f"✅ Servidor iniciado en {sockaddr[0]}:{sockaddr[1]} ({family})")
 
-            if return_socket:
-                return servidor
-            else:
+            # Agregar el socket a la lista de sockets creados
+            sockets_creados.append(servidor)
+
+            # Si solo queremos verificar si se puede crear un socket, retornar True
+            if not return_socket:
+                # Cerrar el socket ya que solo queríamos verificar
+                servidor.close()
                 return True
 
         except OSError as e:
@@ -28,8 +40,15 @@ def crear_socket_servidor(host, port, return_socket=True):
                 servidor.close()
             continue
 
-    # Si llegamos aquí, no pudimos crear ningún socket
-    raise OSError("No se pudo crear un socket para escuchar conexiones")
+    # Verificar si se creó al menos un socket
+    if sockets_creados:
+        if return_socket:
+            return sockets_creados
+        else:
+            return True
+    else:
+        # Si llegamos aquí, no pudimos crear ningún socket
+        raise OSError("No se pudo crear un socket para escuchar conexiones")
 
 def configurar_contexto_ssl(cert_path, key_path):
     contexto = ssl.create_default_context(ssl.Purpose.CLIENT_AUTH)
