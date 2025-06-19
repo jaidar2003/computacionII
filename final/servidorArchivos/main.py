@@ -241,11 +241,9 @@ if __name__ == "__main__":
 
 
 # mac
-
 # python /Users/juanmaaidar/PycharmProjects/computacionII/final/servidorArchivos/main.py -m server
 # python /Users/juanmaaidar/PycharmProjects/computacionII/final/servidorArchivos/main.py -m cliente
 
 # linux
-
 # python /home/juanma/PycharmProjects/computacionII/final/servidorArchivos/main.py -m server
 # python /home/juanma/PycharmProjects/computacionII/final/servidorArchivos/main.py -m cliente
