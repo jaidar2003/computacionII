@@ -64,6 +64,21 @@ def verificar_certificado_servidor():
     except Exception as e:
         return False, f"Error al verificar el certificado del servidor: {e}"
 
+def es_direccion_ip(host):
+    """Verifica si el host es una dirección IP (IPv4 o IPv6)."""
+    try:
+        # Intentar interpretar como IPv4
+        socket.inet_pton(socket.AF_INET, host)
+        return True
+    except socket.error:
+        try:
+            # Intentar interpretar como IPv6
+            socket.inet_pton(socket.AF_INET6, host)
+            return True
+        except socket.error:
+            # No es una dirección IP válida
+            return False
+
 def establecer_conexion_ssl(host, port, verificar_cert=True):
     # Configurar contexto SSL con verificación de certificado
     contexto = ssl.create_default_context()
@@ -73,11 +88,15 @@ def establecer_conexion_ssl(host, port, verificar_cert=True):
         # Habilitar verificación de certificado
         contexto.verify_mode = ssl.CERT_REQUIRED
 
-        # Habilitar verificación de hostname si estamos usando un nombre de dominio
-        if not host.replace('.', '').isdigit():  # Si no es una IP
-            contexto.check_hostname = True
-        else:
+        # Habilitar verificación de hostname solo si estamos usando un nombre de dominio
+        if es_direccion_ip(host):
+            # Es una dirección IP (IPv4 o IPv6), desactivar verificación de hostname
             contexto.check_hostname = False
+            logger.info(f"Desactivando verificación de hostname para dirección IP: {host}")
+        else:
+            # Es un nombre de dominio, activar verificación de hostname
+            contexto.check_hostname = True
+            logger.info(f"Activando verificación de hostname para nombre de dominio: {host}")
 
         # Cargar el certificado del servidor como certificado de confianza
         cert_path = os.path.join(os.path.dirname(os.path.dirname(os.path.dirname(__file__))), 
