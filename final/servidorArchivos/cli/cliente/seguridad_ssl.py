@@ -4,6 +4,7 @@ import ssl
 import socket
 import datetime
 import logging
+import errno
 
 # Configuración básica
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '../..')))
@@ -84,17 +85,17 @@ def establecer_conexion_ssl(host, port, verificar_cert=True):
 
         if os.path.exists(cert_path):
             contexto.load_verify_locations(cafile=cert_path)
-            print(f"{ANSI_VERDE}✅ Certificado del servidor cargado correctamente.{ANSI_RESET}")
+            logger.info("Certificado del servidor cargado correctamente.")
         else:
-            print(f"{ANSI_AMARILLO}⚠️ No se encontró el certificado del servidor en {cert_path}{ANSI_RESET}")
-            print(f"{ANSI_AMARILLO}⚠️ La conexión no será segura sin verificación de certificado.{ANSI_RESET}")
+            logger.warning(f"No se encontró el certificado del servidor en {cert_path}")
+            logger.warning("La conexión no será segura sin verificación de certificado.")
             # Fallback a modo sin verificación si no encontramos el certificado
             contexto.check_hostname = False
             contexto.verify_mode = ssl.CERT_NONE
     else:
-        # Deshabilitar verificación de certificado si el usuario eligió continuar sin verificar
-        print(f"{ANSI_AMARILLO}⚠️ Verificación de certificado deshabilitada por el usuario.{ANSI_RESET}")
-        print(f"{ANSI_AMARILLO}⚠️ La conexión no será segura.{ANSI_RESET}")
+        # Deshabilitar verificación de certificado
+        logger.warning("Verificación de certificado deshabilitada.")
+        # No mostrar advertencia al usuario para evitar confusión
         contexto.check_hostname = False
         contexto.verify_mode = ssl.CERT_NONE
 
@@ -118,11 +119,24 @@ def establecer_conexion_ssl(host, port, verificar_cert=True):
         logger.debug(f"🔌 Conexión segura establecida con {host}:{port}")
         return conexion_ssl
 
+    except socket.error as e:
+        # Manejar específicamente el error de conexión rechazada
+        if hasattr(e, 'errno') and e.errno == errno.ECONNREFUSED:
+            print(f"{ANSI_ROJO}❌ Error al establecer conexión: Conexión rechazada{ANSI_RESET}")
+            print(f"{ANSI_ROJO}❌ El servidor no está en ejecución o no es accesible en {host}:{port}{ANSI_RESET}")
+            print(f"{ANSI_ROJO}❌ Asegúrate de que el servidor esté en ejecución antes de iniciar el cliente.{ANSI_RESET}")
+            logger.error(f"Conexión rechazada al intentar conectar a {host}:{port}. El servidor no está en ejecución.")
+        else:
+            print(f"{ANSI_ROJO}❌ Error de red al establecer conexión: {e}{ANSI_RESET}")
+            logger.error(f"Error de socket al conectar a {host}:{port}: {e}")
+        return None
     except ssl.SSLError as e:
         print(f"{ANSI_ROJO}❌ Error de verificación SSL: {e}{ANSI_RESET}")
         print(f"{ANSI_ROJO}❌ No se pudo verificar la identidad del servidor.{ANSI_RESET}")
         print(f"{ANSI_ROJO}❌ Esto podría indicar un intento de ataque 'man-in-the-middle'.{ANSI_RESET}")
+        logger.error(f"Error SSL al conectar a {host}:{port}: {e}")
         return None
     except Exception as e:
         print(f"{ANSI_ROJO}❌ Error al establecer conexión: {e}{ANSI_RESET}")
+        logger.error(f"Error general al conectar a {host}:{port}: {e}")
         return None

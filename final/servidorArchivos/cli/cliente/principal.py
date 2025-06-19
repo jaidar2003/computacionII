@@ -26,10 +26,8 @@ def iniciar_cliente(host, port):
         print(f"✅ {cert_mensaje}")
     else:
         print(f"⚠️ {cert_mensaje}")
-        continuar = input("⚠️ ¿Desea continuar sin verificar el certificado? (s/n): ")
-        if continuar.lower() != 's':
-            print("🛑 Conexión cancelada por el usuario.")
-            return
+        # Continuar automáticamente sin verificar el certificado
+        logger.warning("Continuando sin verificar el certificado del servidor.")
 
     # Mostrar banner de bienvenida
     mostrar_banner()
@@ -38,6 +36,12 @@ def iniciar_cliente(host, port):
         # Establecer conexión SSL con el servidor
         conexion_ssl = establecer_conexion_ssl(host, port, verificar_cert=cert_valido)
         if not conexion_ssl:
+            # Mostrar mensaje adicional para ayudar al usuario
+            from cli.ui.estilos import ANSI_AMARILLO, ANSI_RESET
+            print(f"\n{ANSI_AMARILLO}ℹ️ Para iniciar el servidor, ejecuta:{ANSI_RESET}")
+            print(f"{ANSI_AMARILLO}   python main.py -m server{ANSI_RESET}")
+            print(f"{ANSI_AMARILLO}   o{ANSI_RESET}")
+            print(f"{ANSI_AMARILLO}   python /Users/juanmaaidar/PycharmProjects/computacionII/final/servidorArchivos/main.py -m server{ANSI_RESET}\n")
             return
 
         # Manejar autenticación del usuario
@@ -49,4 +53,5 @@ def iniciar_cliente(host, port):
 
     except Exception as error:
         logger.error(f"❌ Error en el cliente: {error}")
-        print(f"❌ Error: {error}")
+        from cli.ui.estilos import ANSI_ROJO, ANSI_RESET
+        print(f"{ANSI_ROJO}❌ Error: {error}{ANSI_RESET}")
