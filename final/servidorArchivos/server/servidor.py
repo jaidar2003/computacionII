@@ -125,42 +125,75 @@ def iniciar_servidor(host=None, port=None, directorio=None):
     crear_directorio_si_no_existe(directorio)
 
     try:
-        # Configurar socket para soportar IPv4 e IPv6
-        servidor = crear_socket_servidor(host, port)
-        print(f"🌍 Servidor de Archivos Seguro escuchando en {host}:{port}")
+        # Configurar sockets para IPv4 e IPv6
+        sockets_servidor = crear_socket_servidor(host, port)
+
+        # Verificar si se crearon sockets
+        if not sockets_servidor:
+            logging.error("❌ No se pudieron crear sockets para escuchar conexiones")
+            return
+
+        # Mostrar información sobre los sockets creados
+        print(f"🌍 Servidor de Archivos Seguro escuchando en {len(sockets_servidor)} interfaces:")
+        for i, sock in enumerate(sockets_servidor):
+            family = "IPv6" if sock.family == socket.AF_INET6 else "IPv4"
+            print(f"   ✅ Socket {i+1}: {family}")
 
         # Configurar SSL
         contexto = configurar_contexto_ssl(CERT_PATH, KEY_PATH)
+        if not contexto:
+            return
 
-        # Aceptar conexiones
-        while True:
-            cliente, direccion = servidor.accept()
-            logging.info(f"🔌 Nueva conexión desde {direccion}")
+        # Crear hilos para cada socket
+        hilos = []
+        for sock in sockets_servidor:
+            hilo = threading.Thread(
+                target=_escuchar_conexiones_socket,
+                args=(sock, contexto, directorio),
+                daemon=True
+            )
+            hilos.append(hilo)
+            hilo.start()
 
-            try:
-                # Envolver la conexión con SSL
-                cliente_ssl = contexto.wrap_socket(cliente, server_side=True)
+        # Esperar a que los hilos terminen (o usar algún mecanismo de señalización)
+        try:
+            for hilo in hilos:
+                hilo.join()
+        except KeyboardInterrupt:
+            logging.info("👋 Servidor detenido por el usuario")
+            print("\n👋 Servidor detenido. ¡Hasta pronto!")
 
-                # Crear un hilo para manejar al cliente
-                hilo_cliente = threading.Thread(
-                    target=manejar_cliente,
-                    args=(cliente_ssl, direccion, directorio)
-                )
-                hilo_cliente.daemon = True
-                hilo_cliente.start()
-
-            except ssl.SSLError as error:
-                logging.error(f"🔒 Error SSL con {direccion}: {error}")
-                cliente.close()
-
-    except KeyboardInterrupt:
-        logging.info("👋 Servidor detenido por el usuario")
-        print("\n👋 Servidor detenido. ¡Hasta pronto!")
     except Exception as error:
         logging.error(f"❌ Error en el servidor: {error}")
+
+def _escuchar_conexiones_socket(servidor, contexto, directorio):
+    family_type = "IPv6" if servidor.family == socket.AF_INET6 else "IPv4"
+    print(f"👂 Esperando conexiones {family_type} entrantes...")
+
+    try:
+        while True:
+            try:
+                # Aceptar conexión (bloqueante)
+                conexion, direccion = servidor.accept()
+                logging.info(f"✅ Nueva conexión desde {direccion} ({family_type})")
+
+                try:
+                    # Envolver con SSL
+                    conexion_ssl = contexto.wrap_socket(conexion, server_side=True)
+
+                    # Iniciar hilo para manejar cliente
+                    threading.Thread(
+                        target=manejar_cliente,
+                        args=(conexion_ssl, direccion, directorio),
+                        daemon=True
+                    ).start()
+                except ssl.SSLError as error:
+                    logging.error(f"🔒 Error SSL con {direccion}: {error}")
+                    conexion.close()
+            except Exception as e:
+                logging.error(f"❌ Error al aceptar conexión {family_type}: {e}")
     finally:
-        if 'servidor' in locals():
-            servidor.close()
+        servidor.close()
 
 # La función configurar_argumentos se ha movido a utils/config.py
 

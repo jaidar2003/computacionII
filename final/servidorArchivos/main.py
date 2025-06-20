@@ -61,56 +61,55 @@ def iniciar_servidor_ssl(host=None, port=None, directorio=None):
             family = "IPv6" if sock.family == socket.AF_INET6 else "IPv4"
             print(f"   ✅ Socket {i+1}: {family}")
 
-        # 👂 Escuchar conexiones en todos los sockets
-        _escuchar_conexiones(sockets_servidor, contexto, directorio)
+        # Crear hilos para cada socket
+        hilos = []
+        for sock in sockets_servidor:
+            hilo = threading.Thread(
+                target=_escuchar_conexiones_socket,
+                args=(sock, contexto, directorio),
+                daemon=True
+            )
+            hilos.append(hilo)
+            hilo.start()
+
+        # Esperar a que los hilos terminen (o usar algún mecanismo de señalización)
+        try:
+            for hilo in hilos:
+                hilo.join()
+        except KeyboardInterrupt:
+            print("\n🛑 Apagando servidor...")
+
     except Exception as error:
         logging.error(f"❌ Error al iniciar el servidor: {error}")
 
-def _escuchar_conexiones(servidores, contexto, directorio):
-    # Crear un selector para manejar múltiples sockets
-    sel = selectors.DefaultSelector()
-
-    # Registrar todos los sockets de servidor con el selector
-    for servidor in servidores:
-        sel.register(servidor, selectors.EVENT_READ)
+def _escuchar_conexiones_socket(servidor, contexto, directorio):
+    family_type = "IPv6" if servidor.family == socket.AF_INET6 else "IPv4"
+    print(f"👂 Esperando conexiones {family_type} entrantes...")
 
     try:
-        print("👂 Esperando conexiones entrantes...")
-
         while True:
-            # Esperar eventos en cualquiera de los sockets
-            eventos = sel.select()
-
-            for key, _ in eventos:
-                # Obtener el socket que tiene datos disponibles
-                socket_servidor = key.fileobj
+            try:
+                # Aceptar conexión (bloqueante)
+                conexion, direccion = servidor.accept()
+                logging.info(f"✅ Nueva conexión desde {direccion} ({family_type})")
 
                 try:
-                    # Aceptar la conexión entrante
-                    conexion, direccion = socket_servidor.accept()
+                    # Envolver con SSL
+                    conexion_ssl = contexto.wrap_socket(conexion, server_side=True)
 
-                    # Determinar el tipo de familia del socket
-                    family_type = "IPv6" if socket_servidor.family == socket.AF_INET6 else "IPv4"
-                    logging.info(f"✅ Nueva conexión desde {direccion} ({family_type})")
-
-                    try:
-                        # Envolver la conexión con SSL
-                        conexion_ssl = contexto.wrap_socket(conexion, server_side=True)
-
-                        # 🧵 Iniciar un hilo para manejar al cliente
-                        threading.Thread(target=manejar_cliente, 
-                                        args=(conexion_ssl, direccion, directorio)).start()
-                    except ssl.SSLError as error:
-                        logging.error(f"🔒 Error SSL con {direccion}: {error}")
-                        conexion.close()
-                except Exception as e:
-                    logging.error(f"❌ Error al aceptar conexión: {e}")
-
+                    # Iniciar hilo para manejar cliente
+                    threading.Thread(
+                        target=manejar_cliente,
+                        args=(conexion_ssl, direccion, directorio),
+                        daemon=True
+                    ).start()
+                except ssl.SSLError as error:
+                    logging.error(f"🔒 Error SSL con {direccion}: {error}")
+                    conexion.close()
+            except Exception as e:
+                logging.error(f"❌ Error al aceptar conexión {family_type}: {e}")
     finally:
-        # Cerrar el selector y todos los sockets
-        sel.close()
-        for servidor in servidores:
-            servidor.close()
+        servidor.close()
 
 
 def iniciar_worker_celery():
