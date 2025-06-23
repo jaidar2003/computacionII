@@ -225,3 +225,55 @@ def verificar_estado_archivo(directorio_base, nombre_archivo):
 
     except Exception as error:
         return f"❌ Error al consultar estado: {error}"
+
+def verificar_estado_todos_archivos(directorio_base):
+    try:
+        # Obtener lista de archivos
+        archivos = os.listdir(directorio_base)
+        if not archivos:
+            return "📂 No hay archivos en el servidor para verificar."
+
+        # Consultar estado en la base de datos para cada archivo
+        conn = obtener_conexion()
+        cursor = conn.cursor()
+
+        resultados = []
+        for nombre_archivo in archivos:
+            # Verificar si es un archivo (no un directorio)
+            ruta = os.path.join(directorio_base, nombre_archivo)
+            if not os.path.isfile(ruta):
+                continue
+
+            cursor.execute("""
+                SELECT accion, mensaje FROM log_eventos 
+                WHERE accion = 'VERIFICACION' AND mensaje LIKE ? 
+                ORDER BY fecha DESC LIMIT 1
+            """, (f"%{nombre_archivo}%",))
+
+            resultado = cursor.fetchone()
+            if resultado:
+                estado = resultado[1]
+                # Extraer solo la parte relevante del mensaje
+                if "OK -" in estado:
+                    estado_resumido = "✅ OK"
+                elif "CORRUPTO -" in estado:
+                    estado_resumido = "❌ CORRUPTO"
+                elif "INFECTADO -" in estado:
+                    estado_resumido = "🦠 INFECTADO"
+                else:
+                    estado_resumido = "⚠️ DESCONOCIDO"
+
+                resultados.append(f"📄 {nombre_archivo}: {estado_resumido}")
+            else:
+                resultados.append(f"📄 {nombre_archivo}: ℹ️ Sin información de verificación")
+
+        conn.close()
+
+        # Formatear resultados
+        if resultados:
+            return "📋 Estado de verificación de todos los archivos:\n" + "\n".join(resultados)
+        else:
+            return "ℹ️ No hay información de verificación para ningún archivo."
+
+    except Exception as error:
+        return f"❌ Error al consultar estado de archivos: {error}"

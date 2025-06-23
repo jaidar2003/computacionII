@@ -10,7 +10,7 @@ from .decoradores import requiere_permiso, validar_argumentos
 # Importar funciones de operaciones con archivos
 from .operaciones_archivos import (
     listar_archivos, crear_archivo, eliminar_archivo, renombrar_archivo,
-    verificar_estado_archivo, descargar_archivo
+    verificar_estado_archivo, descargar_archivo, verificar_estado_todos_archivos
 )
 
 # Importar funciones de gestión de permisos
@@ -73,12 +73,17 @@ def _cmd_ver_solicitudes_permisos(partes, directorio_base, usuario_id=None):
 
 @requiere_permiso('lectura')
 def _cmd_verificar_archivo(partes, directorio_base, usuario_id=None):
-    if len(partes) != 2:
-        return "❌ Uso: VERIFICAR [archivo]"
+    # Si solo se proporciona el comando VERIFICAR sin argumentos, verificar todos los archivos
+    if len(partes) == 1:
+        return verificar_estado_todos_archivos(directorio_base)
 
-    # Extraer el nombre del archivo (puede contener espacios si está entre comillas)
-    nombre_archivo = partes[1]
-    return verificar_estado_archivo(directorio_base, nombre_archivo)
+    # Si se proporciona un nombre de archivo, verificar solo ese archivo
+    if len(partes) == 2:
+        nombre_archivo = partes[1]
+        return verificar_estado_archivo(directorio_base, nombre_archivo)
+
+    # Si hay más argumentos, mostrar mensaje de error
+    return "❌ Uso: VERIFICAR [archivo]"
 
 @requiere_permiso('lectura')
 @validar_argumentos(num_args=1, 
