@@ -69,6 +69,12 @@ VIRUS_NO_ESCANEADO = 'no escaneado'
 # Usar el decorador apropiado según si Celery está disponible o no
 @task_decorator
 def verificar_integridad_y_virus(ruta_archivo, hash_esperado=None):
+    # Obtener solo el nombre del archivo sin la ruta completa
+    nombre_archivo = os.path.basename(ruta_archivo)
+
+    # 🏁 Mostrar mensaje de inicio
+    print(f"✅ Iniciando verificación de '{nombre_archivo}' en segundo plano...")
+
     # 🏁 Inicializar resultado
     resultado = _inicializar_resultado(ruta_archivo)
 
@@ -84,6 +90,9 @@ def verificar_integridad_y_virus(ruta_archivo, hash_esperado=None):
 
     # 📝 Registrar el evento
     _registrar_evento(resultado)
+
+    # 🏁 Mostrar mensaje de finalización
+    print(f"✅ Verificación de '{nombre_archivo}' completada: {resultado['estado']} (Integridad: {resultado['integridad']}, Antivirus: {resultado['virus']})")
 
     return resultado
 
@@ -143,6 +152,9 @@ def _actualizar_estado_final(resultado):
 
 def _registrar_evento(resultado):
     try:
+        # Obtener solo el nombre del archivo sin la ruta completa
+        nombre_archivo = os.path.basename(resultado['ruta'])
+
         mensaje_detallado = (
             f"{resultado['estado'].upper()} - "
             f"Integridad: {resultado['integridad']} - "
@@ -156,5 +168,7 @@ def _registrar_evento(resultado):
             "VERIFICACION", 
             mensaje_detallado
         )
+
+        print(f"📝 Resultado guardado en la base de datos para '{nombre_archivo}'")
     except Exception as error:
         print(f"❌ ERROR: No se pudo guardar el resultado en log_eventos: {error}")
