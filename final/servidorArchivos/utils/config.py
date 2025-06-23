@@ -8,8 +8,8 @@ load_dotenv()
 
 # Rutas base
 BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-CERT_PATH = os.path.join(BASE_DIR, "certificados", "certificado.pem")
-KEY_PATH = os.path.join(BASE_DIR, "certificados", "llave.pem")
+CERT_PATH = os.getenv("CERT_PATH", os.path.join(os.path.dirname(BASE_DIR), "certificados", "certificado.pem"))
+KEY_PATH = os.getenv("KEY_PATH", os.path.join(os.path.dirname(BASE_DIR), "certificados", "llave.pem"))
 
 
 def crear_directorio_si_no_existe(directorio):
@@ -89,7 +89,7 @@ def configurar_argumentos(modo_dual=False):
     parser.add_argument(
         '-d', '--directorio', 
         type=str, 
-        default=os.getenv("SERVIDOR_DIR", "archivos"),
+        default=os.getenv("SERVIDOR_DIR", os.path.join(os.path.dirname(BASE_DIR), "archivos")),
         help='Directorio base para archivos'
     )
 

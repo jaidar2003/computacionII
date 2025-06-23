@@ -5,10 +5,14 @@ import socket
 import datetime
 import logging
 import errno
+from dotenv import load_dotenv
 
 # Configuración básica
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '../..')))
 logger = logging.getLogger(__name__)
+
+# Cargar variables de entorno
+load_dotenv()
 
 # Importaciones de módulos propios
 from cli.ui.estilos import ANSI_VERDE, ANSI_RESET, ANSI_ROJO, ANSI_AMARILLO
@@ -18,8 +22,8 @@ DIAS_AVISO_EXPIRACION = 30  # Días antes de expiración para mostrar advertenci
 
 def verificar_certificado_servidor():
 
-    cert_path = os.path.join(os.path.dirname(os.path.dirname(os.path.dirname(__file__))), 
-                           "certificados", "certificado.pem")
+    cert_path = os.getenv("CERT_PATH", os.path.join(os.path.dirname(os.path.dirname(os.path.dirname(os.path.dirname(__file__)))), 
+                           "certificados", "certificado.pem"))
 
     if not os.path.exists(cert_path):
         return False, f"No se encontró el certificado del servidor en {cert_path}"
@@ -99,8 +103,8 @@ def establecer_conexion_ssl(host, port, verificar_cert=True):
             logger.info(f"Activando verificación de hostname para nombre de dominio: {host}")
 
         # Cargar el certificado del servidor como certificado de confianza
-        cert_path = os.path.join(os.path.dirname(os.path.dirname(os.path.dirname(__file__))), 
-                               "certificados", "certificado.pem")
+        cert_path = os.getenv("CERT_PATH", os.path.join(os.path.dirname(os.path.dirname(os.path.dirname(os.path.dirname(__file__)))), 
+                               "certificados", "certificado.pem"))
 
         if os.path.exists(cert_path):
             contexto.load_verify_locations(cafile=cert_path)

@@ -120,7 +120,8 @@ def iniciar_servidor(host=None, port=None, directorio=None):
     # Usar valores predeterminados si no se proporcionan
     host = host or os.getenv("SERVIDOR_HOST", "127.0.0.1")
     port = port or int(os.getenv("SERVIDOR_PORT", 1608))
-    directorio = directorio or os.getenv("SERVIDOR_DIR", "archivos")
+    base_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+    directorio = directorio or os.getenv("SERVIDOR_DIR", os.path.join(os.path.dirname(base_dir), "archivos"))
     # Asegurar que el directorio existe
     crear_directorio_si_no_existe(directorio)
 

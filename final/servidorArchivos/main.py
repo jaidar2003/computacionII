@@ -21,7 +21,7 @@ from server.servidor import manejar_cliente
 from baseDeDatos.db import crear_tablas
 from cli.cliente import iniciar_cliente
 from utils.config import verificar_configuracion_env, crear_directorio_si_no_existe, configurar_argumentos
-from utils.config import CERT_PATH, KEY_PATH
+from utils.config import CERT_PATH, KEY_PATH, BASE_DIR
 from utils.network import crear_socket_servidor, configurar_contexto_ssl
 
 # 📝 Configurar logging
@@ -37,7 +37,7 @@ def iniciar_servidor_ssl(host=None, port=None, directorio=None):
     # Usar valores predeterminados si no se proporcionan
     host = host or os.getenv("SERVIDOR_HOST", "127.0.0.1")
     port = port or int(os.getenv("SERVIDOR_PORT", 1608))
-    directorio = directorio or os.getenv("SERVIDOR_DIR", "archivos")
+    directorio = directorio or os.getenv("SERVIDOR_DIR", os.path.join(os.path.dirname(BASE_DIR), "archivos"))
     # 📂 Asegurar que el directorio de archivos exista
     crear_directorio_si_no_existe(directorio)
 
