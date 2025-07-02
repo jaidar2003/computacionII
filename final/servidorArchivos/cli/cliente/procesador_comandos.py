@@ -18,7 +18,7 @@ from .utilidades import enviar_mensaje, enviar_comando
 
 # Constantes
 BUFFER_SIZE = 1024  # Tamaño del buffer para recibir datos
-DIRECTORIO_BASE = os.getenv("CLIENTE_DIR", "servidorArchivos")
+DIRECTORIO_BASE = os.getenv("CLIENTE_DIR", "descargas")
 
 def procesar_comandos(conexion):
 
