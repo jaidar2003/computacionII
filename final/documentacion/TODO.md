@@ -6,7 +6,7 @@ Este documento detalla las posibles mejoras y características que se podrían i
 
 ### Gestión de Archivos
 
-- [ ] **Transferencia de archivos**: Implementar comandos para subir y descargar archivos completos.
+- [x] **Transferencia de archivos**: Implementar comandos para subir y descargar archivos completos.
 - [ ] **Versionado de archivos**: Mantener un historial de versiones de cada archivo.
 - [ ] **Búsqueda de archivos**: Permitir buscar archivos por nombre, contenido, fecha, etc.
 - [ ] **Metadatos de archivos**: Almacenar y gestionar metadatos como fecha de creación, tipo MIME, etiquetas, etc.

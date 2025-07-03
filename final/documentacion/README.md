@@ -66,19 +66,19 @@ python servidorArchivos/main.py -p 5000 -H 127.0.0.1 -d archivos -v
 ### 5️⃣ **Ejecutar el Cliente**
 
 ```bash
-python servidorArchivos/cli/cliente.py
+python servidorArchivos/cli/cliente/principal.py
 ```
 
 Para opciones adicionales:
 ```bash
-python servidorArchivos/cli/cliente.py -s 127.0.0.1 -p 5000
+python servidorArchivos/cli/cliente/principal.py -s 127.0.0.1 -p 5000
 ```
 
 ### 6️⃣ **Ejecutar el Worker de Celery**
 
 ```bash
 cd servidorArchivos
-celery -A tareas.celery_app worker --loglevel=info
+celery -A tareas.celery worker --loglevel=info
 ```
 
 ---
@@ -88,13 +88,13 @@ celery -A tareas.celery_app worker --loglevel=info
 ```
 ┌───────────────────┐      SSL/TLS      ┌───────────────────┐
 │     Cliente       │  ◀──────────────▶ │     Servidor      │
-│  (cli/cliente.py) │                   │     (main.py)     │
+│  (cli/cliente/)   │                   │     (main.py)     │
 └───────────────────┘                   └───────────────────┘
                                                 │
                                                 ▼
                                      ┌────────────────────────┐
                                      │  Sistema de Archivos   │
-                                     │  (archivos_servidor/)  │
+                                     │     (archivos/)        │
                                      └────────────────────────┘
                                                 │
                                                 ▼
@@ -106,7 +106,7 @@ celery -A tareas.celery_app worker --loglevel=info
                                                 ▼
                                      ┌────────────────────────┐
                                      │ Registro de Actividad  │
-                                     │ (historyLogs + BD)     │
+                                     │  (historial + BD)      │
                                      └────────────────────────┘
 ```
 
@@ -141,35 +141,49 @@ celery -A tareas.celery_app worker --loglevel=info
 ## 📂 Estructura del Proyecto
 
 ```
-servidorArchivos/
-├── archivos_servidor/  # Directorio para almacenar archivos de usuarios
-├── base_datos/
-│   ├── db.py           # Lógica de usuarios y logging (BD)
-│   └── servidor_archivos.db
+final/
+├── archivos/           # Directorio para almacenar archivos de usuarios
 ├── certificados/       # Archivos SSL (certificado.pem, clave_privada.key)
-├── cli/
-│   ├── cliente.py      # Cliente que se conecta al servidor
-│   ├── estilos.py      # Estilos para la interfaz de línea de comandos
-│   ├── interface.py    # Funciones para la interfaz de usuario
-│   ├── mensajes.py     # Mensajes del cliente
-│   └── utils.py        # Utilidades para el cliente
 ├── documentacion/      # Documentación del proyecto
 │   ├── INFO.md         # Informe técnico
 │   ├── INSTALL.md      # Instrucciones de instalación
 │   ├── README.md       # Documentación general
+│   ├── SSL.md          # Configuración de SSL
 │   └── TODO.md         # Lista de mejoras futuras
-├── historyLogs/        # Archivos de registro
+├── historial/          # Archivos de registro (reemplaza historyLogs)
 │   ├── cliente.log     # Registro de actividad del cliente
 │   └── servidor.log    # Registro de actividad del servidor
-├── server/
-│   ├── comandos.py     # Funciones para gestionar archivos
-│   └── seguridad.py    # Módulo de autenticación y configuración SSL
-├── tareas/
-│   ├── celeryconfig.py # Configuración de Celery
-│   ├── tareas.py       # Tareas Celery (escaneo antivirus e integridad)
-│   └── worker.py       # Inicializador del worker Celery
-├── test/               # Pruebas automatizadas
-└── main.py             # Punto de entrada principal del servidor
+└── servidorArchivos/
+    ├── baseDeDatos/    # (antes base_datos)
+    │   └── db.py       # Lógica de usuarios y logging (BD)
+    ├── cli/
+    │   ├── cliente/    # Subdirectorio cliente (nueva estructura)
+    │   │   ├── autenticacion.py
+    │   │   ├── principal.py
+    │   │   ├── procesador_comandos.py
+    │   │   ├── seguridad_ssl.py
+    │   │   └── utilidades.py
+    │   ├── ui/         # Subdirectorio UI (nueva estructura)
+    │   │   ├── estilos.py      # Estilos para la interfaz de línea de comandos
+    │   │   ├── interface.py    # Funciones para la interfaz de usuario
+    │   │   └── mensajes.py     # Mensajes del cliente
+    │   └── utils.py        # Utilidades para el cliente
+    ├── server/
+    │   ├── comandos/       # Subdirectorio comandos (antes era un solo archivo)
+    │   │   ├── decoradores.py
+    │   │   ├── manejadores.py
+    │   │   ├── nucleo.py
+    │   │   ├── operaciones_archivos.py
+    │   │   ├── permisos.py
+    │   │   └── utilidades.py
+    │   ├── seguridad.py    # Módulo de autenticación y configuración SSL
+    │   └── servidor.py     # Implementación del servidor
+    ├── tareas/
+    │   └── celery.py       # Tareas Celery (escaneo antivirus e integridad)
+    ├── utils/              # Nuevo directorio de utilidades
+    │   ├── config.py
+    │   └── network.py
+    └── main.py             # Punto de entrada principal del servidor
 ```
 
 ---
