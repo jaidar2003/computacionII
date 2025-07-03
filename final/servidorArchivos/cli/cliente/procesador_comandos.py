@@ -18,7 +18,7 @@ from .utilidades import enviar_mensaje, enviar_comando
 
 # Constantes
 BUFFER_SIZE = 1024  # Tamaño del buffer para recibir datos
-DIRECTORIO_BASE = os.getenv("CLIENTE_DIR", "descargas")  # Directorio base para guardar archivos
+DIRECTORIO_BASE = os.getenv("CLIENTE_DIR", "servidorArchivos")
 
 def procesar_comandos(conexion):
 
@@ -45,11 +45,6 @@ def procesar_comandos(conexion):
             cmd_base = partes[0].upper()
             args = partes[1] if len(partes) > 1 else ""
 
-            # Manejar VERIFICAR de manera especial
-            if cmd_base == "VERIFICAR" and args:
-                verificar_estado_archivo(conexion, args)
-                continue
-
             # Para RENOMBRAR, necesitamos manejar dos nombres de archivo
             if cmd_base == "RENOMBRAR":
                 # Intentar dividir respetando comillas si están presentes
@@ -72,7 +67,7 @@ def procesar_comandos(conexion):
                     # Si no hay suficientes argumentos, enviar el comando original
                     enviar_comando(conexion, comando)
             else:
-                # Para ELIMINAR y VERIFICAR sin argumentos, solo un nombre de archivo
+                # Para ELIMINAR y VERIFICAR, solo un nombre de archivo
                 if args:
                     # Usar comillas para manejar espacios
                     comando_modificado = f'{cmd_base} "{args}"'

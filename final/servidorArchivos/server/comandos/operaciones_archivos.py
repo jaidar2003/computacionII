@@ -16,7 +16,7 @@ def listar_archivos(directorio_base):
             return "📂 No hay archivos en el servidor."
 
         # Formatear la lista de archivos para mejor visualización
-        archivos_formateados = [f"📄 {archivo}" for archivo in archivos]
+        archivos_formateados = [f"{archivo}" for archivo in archivos]
         return "\n".join(archivos_formateados)
     except Exception as error:
         return f"❌ Error al listar archivos: {error}"
