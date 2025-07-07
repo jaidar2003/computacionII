@@ -166,3 +166,4 @@ descargas/
 *.pem
 notas.md
 tps/
+node_modules/
