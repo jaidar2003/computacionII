@@ -265,6 +265,29 @@ def download_file(filename):
         logging.error(f"Error al descargar archivo: {e}")
         return jsonify({"error": "Error de conexión al servidor"}), 500
 
+@app.route('/api/files/<filename>', methods=['DELETE'])
+@login_required
+def delete_file(filename):
+    """Delete a file from the server"""
+    try:
+        # Get socket connection
+        sock = get_socket_connection()
+
+        # Send delete command
+        command = f"ELIMINAR {filename}"
+        sock.send(command.encode())
+
+        # Receive response
+        response = sock.recv(1024).decode()
+
+        if response.startswith("🗑️"):
+            return jsonify({"message": "Archivo eliminado exitosamente"})
+        else:
+            return jsonify({"error": "Error al eliminar archivo: " + response}), 400
+    except Exception as e:
+        logging.error(f"Error al eliminar archivo: {e}")
+        return jsonify({"error": "Error de conexión al servidor"}), 500
+
 @app.route('/api/logout', methods=['POST'])
 def logout():
     """Handle user logout"""
