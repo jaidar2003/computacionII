@@ -19,7 +19,35 @@ from .permisos import (
     ver_solicitudes_permisos, listar_usuarios_sistema
 )
 
+# Importar funciones de autenticación
+from server.seguridad import autenticar_usuario_en_servidor, registrar_usuario
+
 # Manejadores de comandos
+@validar_argumentos(num_args=2, 
+                   mensaje_error="❌ Formato incorrecto. Usa: AUTH usuario contraseña")
+def _cmd_autenticar_usuario(partes, directorio_base, usuario_id=None):
+    usuario = partes[1]
+    password = partes[2]
+
+    datos_usuario = autenticar_usuario_en_servidor(usuario, password)
+    if datos_usuario:
+        usuario_id, permisos = datos_usuario
+        return f"OK {usuario_id} {permisos}"
+    else:
+        return "ERROR Credenciales inválidas"
+
+@validar_argumentos(num_args=2, 
+                   mensaje_error="❌ Formato incorrecto. Usa: REGISTER usuario contraseña")
+def _cmd_registrar_usuario(partes, directorio_base, usuario_id=None):
+    usuario = partes[1]
+    password = partes[2]
+
+    resultado = registrar_usuario(usuario, password)
+    if resultado.startswith("✅"):
+        return "OK"
+    else:
+        return f"ERROR {resultado}"
+
 @requiere_permiso('lectura')
 def _cmd_listar_archivos(partes, directorio_base, usuario_id=None):
     return listar_archivos(directorio_base)

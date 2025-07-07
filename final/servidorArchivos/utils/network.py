@@ -50,12 +50,20 @@ def crear_socket_servidor(host, port, return_socket=True):
         # Si llegamos aquí, no pudimos crear ningún socket
         raise OSError("No se pudo crear un socket para escuchar conexiones")
 
-def configurar_contexto_ssl(cert_path, key_path):
-    contexto = ssl.create_default_context(ssl.Purpose.CLIENT_AUTH)
+def configurar_contexto_ssl(cert_path, key_path, is_client=False):
+    if is_client:
+        # Configurar contexto para cliente
+        contexto = ssl.create_default_context(ssl.Purpose.SERVER_AUTH)
+        contexto.check_hostname = False
+        contexto.verify_mode = ssl.CERT_NONE
+    else:
+        # Configurar contexto para servidor
+        contexto = ssl.create_default_context(ssl.Purpose.CLIENT_AUTH)
 
-    if not os.path.exists(cert_path) or not os.path.exists(key_path):
-        logging.error(f"❌ ERROR: No se encontraron los certificados SSL en {cert_path} o {key_path}.")
-        return None
+        if not os.path.exists(cert_path) or not os.path.exists(key_path):
+            logging.error(f"❌ ERROR: No se encontraron los certificados SSL en {cert_path} o {key_path}.")
+            return None
 
-    contexto.load_cert_chain(certfile=cert_path, keyfile=key_path)
+        contexto.load_cert_chain(certfile=cert_path, keyfile=key_path)
+
     return contexto

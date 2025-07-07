@@ -10,11 +10,11 @@ sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '../..')
 from .decoradores import validar_argumentos, requiere_permiso
 
 # Importar utilidades compartidas
-from comandos.utilidades import _enviar_mensaje
+from .utilidades import _enviar_mensaje
 
 # Importar manejadores de comandos
 from .manejadores import (
-    _cmd_listar_archivos, _cmd_crear_archivo, _cmd_eliminar_archivo,
+    _cmd_autenticar_usuario, _cmd_registrar_usuario, _cmd_listar_archivos, _cmd_crear_archivo, _cmd_eliminar_archivo,
     _cmd_renombrar_archivo, _cmd_solicitar_cambio_permisos,
     _cmd_aprobar_solicitud_permisos, _cmd_ver_solicitudes_permisos,
     _cmd_verificar_archivo, _cmd_descargar_archivo, _cmd_listar_usuarios_sistema
@@ -22,6 +22,8 @@ from .manejadores import (
 
 # Mapeo de comandos a sus manejadores
 COMANDOS = {
+    "AUTH": _cmd_autenticar_usuario,  # Autenticación de usuario
+    "REGISTER": _cmd_registrar_usuario,  # Registro de usuario
     "LISTAR": _cmd_listar_archivos,
     "CREAR": _cmd_crear_archivo,
     "ELIMINAR": _cmd_eliminar_archivo,
