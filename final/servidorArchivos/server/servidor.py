@@ -55,6 +55,7 @@ def manejar_cliente(conexion_ssl, direccion, directorio):
     finally:
         conexion_ssl.close()
         logging.info(f"🔌 Cliente {direccion} desconectado")
+        print(f"🔌 Cliente {direccion} desconectado")
 
 def _enviar_mensaje(conexion, mensaje):
     conexion.sendall(mensaje.encode('utf-8'))

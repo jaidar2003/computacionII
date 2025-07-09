@@ -31,7 +31,7 @@ app.config['SESSION_PERMANENT'] = False
 app.config['PERMANENT_SESSION_LIFETIME'] = 1800  # 30 minutos
 
 # Habilitar CORS para el frontend
-CORS(app, supports_credentials=True, origins=["http://localhost:5173"])
+CORS(app, supports_credentials=True, origins=["*"])
 
 # Configuración de conexión al servidor
 SERVIDOR_HOST = os.getenv("SERVIDOR_HOST", "127.0.0.1")
@@ -45,57 +45,65 @@ if not os.path.exists(UPLOAD_FOLDER):
 # Función para establecer conexión con el servidor de sockets
 def conectar_servidor():
     try:
+        print(f"Intentando conectar al servidor en {SERVIDOR_HOST}:{SERVIDOR_PORT}...")
         conexion_ssl = establecer_conexion_ssl(SERVIDOR_HOST, SERVIDOR_PORT, verificar_cert=True)
         if not conexion_ssl:
-            raise Exception("No se pudo establecer conexión con el servidor")
+            error_msg = "No se pudo establecer conexión con el servidor"
+            print(error_msg)
+            raise Exception(error_msg)
+        print("Conexión establecida con éxito")
         return conexion_ssl
     except Exception as e:
-        logging.error(f"Error al conectar con el servidor: {e}")
+        error_msg = f"Error al conectar con el servidor: {e}"
+        logging.error(error_msg)
+        print(error_msg)
         raise
 
 # Función para enviar comando al servidor y recibir respuesta
 def enviar_comando(comando, conexion=None):
     conexion_propia = conexion is None
-    
+
     try:
         if conexion_propia:
             conexion = conectar_servidor()
-            
+
             # Autenticar si hay sesión activa
             if 'usuario' in session and 'password' in session:
                 # Descartar mensaje de bienvenida
                 conexion.recv(1024)
-                
+
                 # Enviar usuario
                 conexion.recv(1024)  # Descartar prompt
                 conexion.sendall(session['usuario'].encode('utf-8'))
-                
+
                 # Enviar contraseña
                 conexion.recv(1024)  # Descartar prompt
                 conexion.sendall(session['password'].encode('utf-8'))
-                
+
                 # Verificar autenticación
                 respuesta_auth = conexion.recv(1024).decode('utf-8')
                 if "✅ Autenticación exitosa" not in respuesta_auth:
                     raise Exception("Error de autenticación")
-                
+
                 # Descartar prompt de comando
                 conexion.recv(1024)
             else:
                 # Si no hay sesión, solo descartar el mensaje de bienvenida
                 conexion.recv(1024)
-        
+
         # Enviar comando
         conexion.sendall(comando.encode('utf-8'))
-        
+
         # Recibir respuesta (descartar prompt si es necesario)
         if comando.upper() != "SALIR":
             respuesta = conexion.recv(1024).decode('utf-8')
             return respuesta
-        
+
         return "Comando enviado"
     except Exception as e:
-        logging.error(f"Error al enviar comando: {e}")
+        error_msg = f"Error al enviar comando '{comando}': {e}"
+        logging.error(error_msg)
+        print(error_msg)
         raise
     finally:
         if conexion_propia and conexion:
@@ -114,7 +122,8 @@ def check_auth():
     if 'usuario' in session:
         return jsonify({
             'authenticated': True,
-            'usuario': session['usuario']
+            'usuario': session['usuario'],
+            'permisos': session.get('permisos', 'lectura')  # Include permissions in the response
         })
     return jsonify({'authenticated': False})
 
@@ -123,57 +132,73 @@ def login():
     data = request.json
     username = data.get('username')
     password = data.get('password')
-    
+
     if not username or not password:
         return jsonify({'error': 'Usuario y contraseña son requeridos'}), 400
-    
+
     try:
+        # Primero autenticar con la base de datos para obtener los permisos
+        from baseDeDatos.db import autenticar_usuario
+        auth_result = autenticar_usuario(username, password)
+
+        if not auth_result:
+            return jsonify({'error': 'Credenciales inválidas'}), 401
+
+        user_id, permisos = auth_result
+
+        # Luego autenticar con el servidor de sockets
         conexion = conectar_servidor()
-        
+
         # Descartar mensaje de bienvenida
         conexion.recv(1024)
-        
+
         # Enviar usuario
         conexion.recv(1024)  # Descartar prompt
         conexion.sendall(username.encode('utf-8'))
-        
+
         # Enviar contraseña
         conexion.recv(1024)  # Descartar prompt
         conexion.sendall(password.encode('utf-8'))
-        
+
         # Verificar autenticación
         respuesta_auth = conexion.recv(1024).decode('utf-8')
-        
+
         if "✅ Autenticación exitosa" in respuesta_auth:
             # Guardar en sesión
             session['usuario'] = username
             session['password'] = password  # Necesario para reautenticar en cada comando
-            
+            session['permisos'] = permisos  # Guardar permisos en la sesión
+
             # Cerrar conexión limpiamente
             conexion.recv(1024)  # Descartar prompt de comando
             conexion.sendall("SALIR".encode('utf-8'))
             conexion.close()
-            
-            return jsonify({'success': True, 'usuario': username})
+
+            return jsonify({
+                'success': True, 
+                'usuario': username,
+                'permisos': permisos
+            })
         else:
             return jsonify({'error': 'Credenciales inválidas'}), 401
     except Exception as e:
         logging.error(f"Error en login: {e}")
-        return jsonify({'error': 'Error al conectar con el servidor'}), 500
+        print(f"Error en login: {e}")
+        return jsonify({'error': f'Error al conectar con el servidor: {str(e)}'}), 500
 
 @app.route('/api/register', methods=['POST'])
 def register():
     data = request.json
     username = data.get('username')
     password = data.get('password')
-    
+
     if not username or not password:
         return jsonify({'error': 'Usuario y contraseña son requeridos'}), 400
-    
+
     try:
         comando = f"REGISTRAR {username} {password}"
         respuesta = enviar_comando(comando)
-        
+
         if "✅" in respuesta:
             return jsonify({'success': True, 'message': 'Usuario registrado correctamente'})
         else:
@@ -191,10 +216,10 @@ def logout():
 def list_files():
     if 'usuario' not in session:
         return jsonify({'error': 'No autenticado'}), 401
-    
+
     try:
         respuesta = enviar_comando("LISTAR")
-        
+
         # Parsear la respuesta para extraer los archivos
         files = []
         for line in respuesta.strip().split('\n'):
@@ -204,14 +229,14 @@ def list_files():
                     name = parts[0]
                     size = int(parts[1])
                     date = ' '.join(parts[2:4])
-                    
+
                     files.append({
                         'name': name,
                         'size': size,
                         'modified': date,
                         'type': 'file'
                     })
-        
+
         return jsonify({'files': files})
     except Exception as e:
         logging.error(f"Error al listar archivos: {e}")
@@ -221,27 +246,27 @@ def list_files():
 def upload_file():
     if 'usuario' not in session:
         return jsonify({'error': 'No autenticado'}), 401
-    
+
     if 'file' not in request.files:
         return jsonify({'error': 'No se envió ningún archivo'}), 400
-    
+
     file = request.files['file']
     if file.filename == '':
         return jsonify({'error': 'Nombre de archivo vacío'}), 400
-    
+
     filename = secure_filename(file.filename)
     filepath = os.path.join(UPLOAD_FOLDER, filename)
-    
+
     try:
         # Guardar archivo temporalmente
         file.save(filepath)
-        
+
         # Enviar comando de subida
         comando = f"SUBIR {filename}"
-        
+
         # Establecer conexión
         conexion = conectar_servidor()
-        
+
         # Autenticar
         conexion.recv(1024)  # Descartar mensaje de bienvenida
         conexion.recv(1024)  # Descartar prompt de usuario
@@ -249,35 +274,35 @@ def upload_file():
         conexion.recv(1024)  # Descartar prompt de contraseña
         conexion.sendall(session['password'].encode('utf-8'))
         respuesta_auth = conexion.recv(1024).decode('utf-8')
-        
+
         if "✅ Autenticación exitosa" not in respuesta_auth:
             return jsonify({'error': 'Error de autenticación'}), 401
-        
+
         # Descartar prompt de comando
         conexion.recv(1024)
-        
+
         # Enviar comando de subida
         conexion.sendall(comando.encode('utf-8'))
-        
+
         # Leer respuesta inicial (confirmación para enviar archivo)
         respuesta = conexion.recv(1024).decode('utf-8')
-        
+
         if "Listo para recibir" in respuesta:
             # Enviar archivo
             with open(filepath, 'rb') as f:
                 data = f.read()
                 conexion.sendall(data)
-            
+
             # Leer respuesta final
             respuesta_final = conexion.recv(1024).decode('utf-8')
-            
+
             # Cerrar conexión
             conexion.sendall("SALIR".encode('utf-8'))
             conexion.close()
-            
+
             # Eliminar archivo temporal
             os.remove(filepath)
-            
+
             if "✅" in respuesta_final:
                 return jsonify({'success': True, 'message': 'Archivo subido correctamente'})
             else:
@@ -295,14 +320,14 @@ def upload_file():
 def download_file(filename):
     if 'usuario' not in session:
         return jsonify({'error': 'No autenticado'}), 401
-    
+
     filename = secure_filename(filename)
     download_path = os.path.join(UPLOAD_FOLDER, filename)
-    
+
     try:
         # Establecer conexión
         conexion = conectar_servidor()
-        
+
         # Autenticar
         conexion.recv(1024)  # Descartar mensaje de bienvenida
         conexion.recv(1024)  # Descartar prompt de usuario
@@ -310,20 +335,20 @@ def download_file(filename):
         conexion.recv(1024)  # Descartar prompt de contraseña
         conexion.sendall(session['password'].encode('utf-8'))
         respuesta_auth = conexion.recv(1024).decode('utf-8')
-        
+
         if "✅ Autenticación exitosa" not in respuesta_auth:
             return jsonify({'error': 'Error de autenticación'}), 401
-        
+
         # Descartar prompt de comando
         conexion.recv(1024)
-        
+
         # Enviar comando de descarga
         comando = f"DESCARGAR {filename}"
         conexion.sendall(comando.encode('utf-8'))
-        
+
         # Leer respuesta inicial
         respuesta = conexion.recv(1024).decode('utf-8')
-        
+
         if "Enviando archivo" in respuesta:
             # Recibir y guardar archivo
             with open(download_path, 'wb') as f:
@@ -332,19 +357,19 @@ def download_file(filename):
                     if not data:
                         break
                     f.write(data)
-            
+
             # Cerrar conexión
             conexion.close()
-            
+
             # Enviar archivo al cliente y luego eliminarlo
             response = send_file(download_path, as_attachment=True, download_name=filename)
-            
+
             # Eliminar archivo después de enviarlo
             @response.call_on_close
             def on_close():
                 if os.path.exists(download_path):
                     os.remove(download_path)
-            
+
             return response
         else:
             return jsonify({'error': respuesta}), 500
@@ -359,13 +384,13 @@ def download_file(filename):
 def delete_file(filename):
     if 'usuario' not in session:
         return jsonify({'error': 'No autenticado'}), 401
-    
+
     filename = secure_filename(filename)
-    
+
     try:
         comando = f"ELIMINAR {filename}"
         respuesta = enviar_comando(comando)
-        
+
         if "✅" in respuesta:
             return jsonify({'success': True, 'message': 'Archivo eliminado correctamente'})
         else:
@@ -374,5 +399,59 @@ def delete_file(filename):
         logging.error(f"Error al eliminar archivo: {e}")
         return jsonify({'error': f'Error al eliminar archivo: {str(e)}'}), 500
 
+@app.route('/api/files/rename', methods=['PUT'])
+def rename_file():
+    if 'usuario' not in session:
+        return jsonify({'error': 'No autenticado'}), 401
+
+    data = request.json
+    old_name = secure_filename(data.get('oldName', ''))
+    new_name = secure_filename(data.get('newName', ''))
+
+    if not old_name or not new_name:
+        return jsonify({'error': 'Nombres de archivo inválidos'}), 400
+
+    try:
+        comando = f"RENOMBRAR {old_name} {new_name}"
+        respuesta = enviar_comando(comando)
+
+        if "✅" in respuesta or "✏️" in respuesta:
+            return jsonify({'success': True, 'message': f'Archivo renombrado de {old_name} a {new_name}'})
+        else:
+            return jsonify({'error': respuesta}), 500
+    except Exception as e:
+        logging.error(f"Error al renombrar archivo: {e}")
+        return jsonify({'error': f'Error al renombrar archivo: {str(e)}'}), 500
+
+@app.route('/api/files/verify/<filename>', methods=['GET'])
+def verify_file(filename):
+    if 'usuario' not in session:
+        return jsonify({'error': 'No autenticado'}), 401
+
+    filename = secure_filename(filename)
+
+    try:
+        comando = f"VERIFICAR {filename}"
+        respuesta = enviar_comando(comando)
+
+        # Extraer información relevante de la respuesta
+        estado = "desconocido"
+        if "OK" in respuesta:
+            estado = "ok"
+        elif "CORRUPTO" in respuesta:
+            estado = "corrupto"
+        elif "INFECTADO" in respuesta:
+            estado = "infectado"
+
+        return jsonify({
+            'success': True, 
+            'filename': filename,
+            'status': estado,
+            'message': respuesta
+        })
+    except Exception as e:
+        logging.error(f"Error al verificar archivo: {e}")
+        return jsonify({'error': f'Error al verificar archivo: {str(e)}'}), 500
+
 if __name__ == '__main__':
-    app.run(host='0.0.0.0', port=5000, debug=True)
+    app.run(host='0.0.0.0', port=5007, debug=True)

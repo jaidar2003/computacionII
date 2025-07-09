@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import styled from 'styled-components';
 import axios from 'axios';
 import { useAuth } from '../contexts/AuthContext';
-import { FiUpload, FiDownload, FiTrash2, FiLogOut, FiFile, FiFolder } from 'react-icons/fi';
+import { FiUpload, FiDownload, FiTrash2, FiLogOut, FiFile, FiFolder, FiEdit, FiCheckCircle } from 'react-icons/fi';
 
 interface FileItem {
   name: string;
@@ -12,12 +12,15 @@ interface FileItem {
 }
 
 const Dashboard: React.FC = () => {
-  const { user, logout } = useAuth();
+  const { user, userRole, logout } = useAuth();
   const [files, setFiles] = useState<FileItem[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [selectedFile, setSelectedFile] = useState<FileItem | null>(null);
   const [uploadProgress, setUploadProgress] = useState<number | null>(null);
+  const [isRenameModalOpen, setIsRenameModalOpen] = useState(false);
+  const [newFileName, setNewFileName] = useState('');
+  const [verificationStatus, setVerificationStatus] = useState<{status: string, message: string} | null>(null);
 
   // Fetch files on component mount
   useEffect(() => {
@@ -27,7 +30,7 @@ const Dashboard: React.FC = () => {
   const fetchFiles = async () => {
     setIsLoading(true);
     setError(null);
-    
+
     try {
       const response = await axios.get('/api/files', { withCredentials: true });
       setFiles(response.data.files || []);
@@ -46,14 +49,14 @@ const Dashboard: React.FC = () => {
   const handleFileUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
     const files = event.target.files;
     if (!files || files.length === 0) return;
-    
+
     const file = files[0];
     const formData = new FormData();
     formData.append('file', file);
-    
+
     setUploadProgress(0);
     setError(null);
-    
+
     try {
       await axios.post('/api/files/upload', formData, {
         withCredentials: true,
@@ -67,7 +70,7 @@ const Dashboard: React.FC = () => {
           }
         },
       });
-      
+
       // Refresh file list after upload
       fetchFiles();
       setUploadProgress(null);
@@ -90,7 +93,7 @@ const Dashboard: React.FC = () => {
     if (!confirm(`¿Estás seguro de que deseas eliminar ${fileName}?`)) {
       return;
     }
-    
+
     try {
       await axios.delete(`/api/files/${fileName}`, { withCredentials: true });
       fetchFiles();
@@ -100,13 +103,49 @@ const Dashboard: React.FC = () => {
     }
   };
 
+  const handleFileRename = async () => {
+    if (!selectedFile || !newFileName) return;
+
+    try {
+      const response = await axios.put('/api/files/rename', {
+        oldName: selectedFile.name,
+        newName: newFileName
+      }, { withCredentials: true });
+
+      if (response.data.success) {
+        setIsRenameModalOpen(false);
+        setNewFileName('');
+        fetchFiles();
+      }
+    } catch (err: any) {
+      setError(err.response?.data?.error || 'Error al renombrar archivo');
+      console.error('Error renaming file:', err);
+    }
+  };
+
+  const handleFileVerify = async (fileName: string) => {
+    try {
+      const response = await axios.get(`/api/files/verify/${fileName}`, { withCredentials: true });
+
+      if (response.data.success) {
+        setVerificationStatus({
+          status: response.data.status,
+          message: response.data.message
+        });
+      }
+    } catch (err: any) {
+      setError(err.response?.data?.error || 'Error al verificar archivo');
+      console.error('Error verifying file:', err);
+    }
+  };
+
   const formatFileSize = (bytes: number): string => {
     if (bytes === 0) return '0 Bytes';
-    
+
     const k = 1024;
     const sizes = ['Bytes', 'KB', 'MB', 'GB', 'TB'];
     const i = Math.floor(Math.log(bytes) / Math.log(k));
-    
+
     return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
   };
 
@@ -116,12 +155,13 @@ const Dashboard: React.FC = () => {
         <h1>Servidor de Archivos</h1>
         <UserInfo>
           <span>Hola, {user}</span>
+          <RoleBadge>{userRole === 'admin' ? 'Administrador' : 'Usuario'}</RoleBadge>
           <LogoutButton onClick={logout}>
             <FiLogOut /> Salir
           </LogoutButton>
         </UserInfo>
       </Header>
-      
+
       <Content>
         <Sidebar>
           <SidebarTitle>Acciones</SidebarTitle>
@@ -133,18 +173,24 @@ const Dashboard: React.FC = () => {
               style={{ opacity: 0, position: 'absolute', top: 0, left: 0, width: '100%', height: '100%', cursor: 'pointer' }} 
             />
           </UploadButton>
-          
+
           {uploadProgress !== null && (
             <ProgressContainer>
               <ProgressBar progress={uploadProgress} />
               <span>{uploadProgress}%</span>
             </ProgressContainer>
           )}
-          
+
           {selectedFile && (
             <ActionButtons>
               <ActionButton onClick={() => handleFileDownload(selectedFile.name)}>
                 <FiDownload /> Descargar
+              </ActionButton>
+              <ActionButton onClick={() => setIsRenameModalOpen(true)}>
+                <FiEdit /> Renombrar
+              </ActionButton>
+              <ActionButton onClick={() => handleFileVerify(selectedFile.name)}>
+                <FiCheckCircle /> Verificar
               </ActionButton>
               <ActionButton onClick={() => handleFileDelete(selectedFile.name)}>
                 <FiTrash2 /> Eliminar
@@ -152,15 +198,15 @@ const Dashboard: React.FC = () => {
             </ActionButtons>
           )}
         </Sidebar>
-        
+
         <MainContent>
           <ContentHeader>
             <h2>Mis Archivos</h2>
             <RefreshButton onClick={fetchFiles}>Actualizar</RefreshButton>
           </ContentHeader>
-          
+
           {error && <ErrorMessage>{error}</ErrorMessage>}
-          
+
           {isLoading ? (
             <LoadingMessage>Cargando archivos...</LoadingMessage>
           ) : files.length === 0 ? (
@@ -175,7 +221,7 @@ const Dashboard: React.FC = () => {
                 <div>Tamaño</div>
                 <div>Modificado</div>
               </FileListHeader>
-              
+
               {files.map((file) => (
                 <FileItem 
                   key={file.name} 
@@ -194,6 +240,33 @@ const Dashboard: React.FC = () => {
           )}
         </MainContent>
       </Content>
+
+      {isRenameModalOpen && selectedFile && (
+        <Modal>
+          <ModalContent>
+            <h3>Renombrar Archivo</h3>
+            <p>Nombre actual: {selectedFile.name}</p>
+            <input
+              type="text"
+              value={newFileName}
+              onChange={(e) => setNewFileName(e.target.value)}
+              placeholder="Nuevo nombre"
+            />
+            <ModalButtons>
+              <Button onClick={() => setIsRenameModalOpen(false)}>Cancelar</Button>
+              <Button primary onClick={handleFileRename}>Renombrar</Button>
+            </ModalButtons>
+          </ModalContent>
+        </Modal>
+      )}
+
+      {verificationStatus && (
+        <VerificationStatus status={verificationStatus.status}>
+          <h3>Resultado de la Verificación</h3>
+          <p>{verificationStatus.message}</p>
+          <Button onClick={() => setVerificationStatus(null)}>Cerrar</Button>
+        </VerificationStatus>
+      )}
     </DashboardContainer>
   );
 };
@@ -214,7 +287,7 @@ const Header = styled.header`
   justify-content: space-between;
   align-items: center;
   box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
-  
+
   h1 {
     margin: 0;
     font-size: 20px;
@@ -227,6 +300,16 @@ const UserInfo = styled.div`
   gap: 15px;
 `;
 
+const RoleBadge = styled.div`
+  background-color: ${props => props.children === 'Administrador' ? '#ff9800' : '#4caf50'};
+  color: white;
+  padding: 4px 8px;
+  border-radius: 4px;
+  font-size: 12px;
+  margin-left: 10px;
+  font-weight: bold;
+`;
+
 const LogoutButton = styled.button`
   background: none;
   border: none;
@@ -237,7 +320,7 @@ const LogoutButton = styled.button`
   cursor: pointer;
   padding: 5px 10px;
   border-radius: 4px;
-  
+
   &:hover {
     background-color: rgba(255, 255, 255, 0.1);
   }
@@ -248,7 +331,7 @@ const Content = styled.div`
   flex: 1;
   padding: 20px;
   gap: 20px;
-  
+
   @media (max-width: 768px) {
     flex-direction: column;
   }
@@ -260,7 +343,7 @@ const Sidebar = styled.div`
   box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
   padding: 20px;
   width: 250px;
-  
+
   @media (max-width: 768px) {
     width: auto;
   }
@@ -287,7 +370,7 @@ const UploadButton = styled.div`
   gap: 8px;
   position: relative;
   overflow: hidden;
-  
+
   &:hover {
     background-color: #0052cc;
   }
@@ -298,7 +381,7 @@ const ProgressContainer = styled.div`
   display: flex;
   flex-direction: column;
   gap: 5px;
-  
+
   span {
     font-size: 12px;
     text-align: center;
@@ -311,7 +394,7 @@ const ProgressBar = styled.div<{ progress: number }>`
   border-radius: 3px;
   overflow: hidden;
   position: relative;
-  
+
   &::after {
     content: '';
     position: absolute;
@@ -342,7 +425,7 @@ const ActionButton = styled.button`
   display: flex;
   align-items: center;
   gap: 8px;
-  
+
   &:hover {
     background-color: #e0e0e0;
   }
@@ -363,7 +446,7 @@ const ContentHeader = styled.div`
   justify-content: space-between;
   align-items: center;
   margin-bottom: 20px;
-  
+
   h2 {
     margin: 0;
     font-size: 18px;
@@ -379,7 +462,7 @@ const RefreshButton = styled.button`
   padding: 8px 12px;
   font-size: 14px;
   cursor: pointer;
-  
+
   &:hover {
     background-color: #e0e0e0;
   }
@@ -403,7 +486,7 @@ const EmptyState = styled.div`
   text-align: center;
   padding: 40px;
   color: #666;
-  
+
   p {
     margin: 5px 0;
   }
@@ -432,7 +515,7 @@ const FileItem = styled.div<{ selected: boolean }>`
   border-bottom: 1px solid #eee;
   cursor: pointer;
   background-color: ${props => props.selected ? '#e3f2fd' : 'transparent'};
-  
+
   &:hover {
     background-color: ${props => props.selected ? '#e3f2fd' : '#f9f9f9'};
   }
@@ -442,9 +525,94 @@ const FileName = styled.div`
   display: flex;
   align-items: center;
   gap: 8px;
-  
+
   svg {
     color: #0066ff;
+  }
+`;
+
+const Modal = styled.div`
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background-color: rgba(0, 0, 0, 0.5);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  z-index: 1000;
+`;
+
+const ModalContent = styled.div`
+  background-color: white;
+  padding: 20px;
+  border-radius: 8px;
+  width: 400px;
+  max-width: 90%;
+
+  h3 {
+    margin-top: 0;
+  }
+
+  input {
+    width: 100%;
+    padding: 8px;
+    margin: 10px 0;
+    border: 1px solid #ddd;
+    border-radius: 4px;
+  }
+`;
+
+const ModalButtons = styled.div`
+  display: flex;
+  justify-content: flex-end;
+  gap: 10px;
+  margin-top: 15px;
+`;
+
+const Button = styled.button<{ primary?: boolean }>`
+  background-color: ${props => props.primary ? '#0066ff' : '#f5f5f5'};
+  color: ${props => props.primary ? 'white' : '#333'};
+  border: none;
+  border-radius: 4px;
+  padding: 8px 12px;
+  cursor: pointer;
+
+  &:hover {
+    background-color: ${props => props.primary ? '#0052cc' : '#e0e0e0'};
+  }
+`;
+
+const VerificationStatus = styled.div<{ status: string }>`
+  position: fixed;
+  bottom: 20px;
+  right: 20px;
+  background-color: white;
+  padding: 15px;
+  border-radius: 8px;
+  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+  border-left: 5px solid ${props => {
+    switch(props.status) {
+      case 'ok': return '#4caf50';
+      case 'corrupto': return '#f44336';
+      case 'infectado': return '#ff9800';
+      default: return '#2196f3';
+    }
+  }};
+  max-width: 400px;
+  z-index: 900;
+
+  h3 {
+    margin-top: 0;
+    color: ${props => {
+      switch(props.status) {
+        case 'ok': return '#4caf50';
+        case 'corrupto': return '#f44336';
+        case 'infectado': return '#ff9800';
+        default: return '#2196f3';
+      }
+    }};
   }
 `;
 

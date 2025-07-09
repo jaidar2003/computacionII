@@ -5,6 +5,7 @@ import axios from 'axios';
 interface AuthContextType {
   isAuthenticated: boolean;
   user: string | null;
+  userRole: string | null;  // Add userRole property
   login: (username: string, password: string) => Promise<boolean>;
   register: (username: string, password: string) => Promise<boolean>;
   logout: () => void;
@@ -15,6 +16,7 @@ interface AuthContextType {
 const AuthContext = createContext<AuthContextType>({
   isAuthenticated: false,
   user: null,
+  userRole: null,  // Add default value for userRole
   login: async () => false,
   register: async () => false,
   logout: () => {},
@@ -31,6 +33,7 @@ interface AuthProviderProps {
 export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   const [isAuthenticated, setIsAuthenticated] = useState<boolean>(false);
   const [user, setUser] = useState<string | null>(null);
+  const [userRole, setUserRole] = useState<string | null>(null);  // Add state for userRole
   const [error, setError] = useState<string | null>(null);
 
   // Check if user is already authenticated on mount
@@ -41,6 +44,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
         if (response.data.authenticated) {
           setIsAuthenticated(true);
           setUser(response.data.usuario);
+          setUserRole(response.data.permisos);  // Set userRole from response
         }
       } catch (err) {
         // User is not authenticated, that's okay
@@ -56,13 +60,14 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     try {
       setError(null);
       const response = await axios.post('/api/login', { username, password }, { withCredentials: true });
-      
+
       if (response.data.usuario) {
         setIsAuthenticated(true);
         setUser(response.data.usuario);
+        setUserRole(response.data.permisos);  // Set userRole from response
         return true;
       }
-      
+
       return false;
     } catch (err: any) {
       setError(err.response?.data?.error || 'Error al iniciar sesión');
@@ -75,11 +80,11 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     try {
       setError(null);
       const response = await axios.post('/api/register', { username, password });
-      
+
       if (response.status === 200) {
         return true;
       }
-      
+
       return false;
     } catch (err: any) {
       setError(err.response?.data?.error || 'Error al registrarse');
@@ -96,6 +101,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     } finally {
       setIsAuthenticated(false);
       setUser(null);
+      setUserRole(null);  // Clear userRole on logout
     }
   };
 
@@ -103,6 +109,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   const value = {
     isAuthenticated,
     user,
+    userRole,  // Include userRole in the context value
     login,
     register,
     logout,

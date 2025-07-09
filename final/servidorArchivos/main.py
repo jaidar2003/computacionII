@@ -92,6 +92,7 @@ def _escuchar_conexiones_socket(servidor, contexto, directorio):
                 # Aceptar conexión (bloqueante)
                 conexion, direccion = servidor.accept()
                 logging.info(f"✅ Nueva conexión desde {direccion} ({family_type})")
+                print(f"✅ Nueva conexión desde {direccion} ({family_type})")
 
                 try:
                     # Envolver con SSL
