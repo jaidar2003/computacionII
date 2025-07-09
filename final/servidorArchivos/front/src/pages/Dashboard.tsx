@@ -22,21 +22,40 @@ const Dashboard: React.FC = () => {
   const [newFileName, setNewFileName] = useState('');
   const [verificationStatus, setVerificationStatus] = useState<{status: string, message: string} | null>(null);
 
-  // Fetch files on component mount
+  // Fetch files on component mount and periodically refresh
   useEffect(() => {
     fetchFiles();
+
+    // Set up interval to refresh files every 10 seconds
+    const interval = setInterval(() => {
+      fetchFiles();
+    }, 10000);
+
+    // Clean up interval on component unmount
+    return () => clearInterval(interval);
   }, []);
 
-  const fetchFiles = async () => {
+  const fetchFiles = async (retryCount = 0) => {
     setIsLoading(true);
     setError(null);
 
     try {
       const response = await axios.get('/api/files', { withCredentials: true });
+      console.log('API response:', response.data); // Debug log
       setFiles(response.data.files || []);
     } catch (err: any) {
-      setError(err.response?.data?.error || 'Error al cargar archivos');
       console.error('Error fetching files:', err);
+
+      // Retry up to 3 times with exponential backoff
+      if (retryCount < 3) {
+        console.log(`Retrying fetch (attempt ${retryCount + 1})...`);
+        setTimeout(() => {
+          fetchFiles(retryCount + 1);
+        }, 1000 * Math.pow(2, retryCount)); // 1s, 2s, 4s backoff
+        return;
+      }
+
+      setError(err.response?.data?.error || 'Error al cargar archivos');
     } finally {
       setIsLoading(false);
     }

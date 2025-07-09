@@ -27,11 +27,16 @@ logging.basicConfig(level=logging.INFO, format="%(asctime)s - %(levelname)s - %(
 app = Flask(__name__)
 app.secret_key = os.urandom(24)  # Clave para las sesiones
 app.config['SESSION_TYPE'] = 'filesystem'
-app.config['SESSION_PERMANENT'] = False
+app.config['SESSION_PERMANENT'] = True  # Cambiar a True para mantener la sesión
 app.config['PERMANENT_SESSION_LIFETIME'] = 1800  # 30 minutos
+app.config['SESSION_COOKIE_SECURE'] = False  # Cambiar a True en producción con HTTPS
+app.config['SESSION_COOKIE_HTTPONLY'] = True
+app.config['SESSION_COOKIE_SAMESITE'] = 'Lax'  # Usar 'None' en producción con HTTPS
 
 # Habilitar CORS para el frontend
-CORS(app, supports_credentials=True, origins=["*"])
+# En producción, reemplazar "*" con la URL específica del frontend
+CORS(app, supports_credentials=True, origins=["*"], allow_headers=["Content-Type", "Authorization"],
+     expose_headers=["Content-Disposition"], methods=["GET", "POST", "PUT", "DELETE", "OPTIONS"])
 
 # Configuración de conexión al servidor
 SERVIDOR_HOST = os.getenv("SERVIDOR_HOST", "127.0.0.1")
@@ -119,12 +124,18 @@ def enviar_comando(comando, conexion=None):
 
 @app.route('/api/check-auth', methods=['GET'])
 def check_auth():
+    # Log para debugging de sesiones
+    logging.debug(f"Verificando autenticación. Sesión actual: {dict(session)}")
+
     if 'usuario' in session:
+        logging.info(f"Usuario autenticado: {session['usuario']}")
         return jsonify({
             'authenticated': True,
             'usuario': session['usuario'],
             'permisos': session.get('permisos', 'lectura')  # Include permissions in the response
         })
+
+    logging.info("Usuario no autenticado")
     return jsonify({'authenticated': False})
 
 @app.route('/api/login', methods=['POST'])
@@ -215,32 +226,48 @@ def logout():
 @app.route('/api/files', methods=['GET'])
 def list_files():
     if 'usuario' not in session:
+        logging.warning(f"Intento de listar archivos sin sesión activa")
         return jsonify({'error': 'No autenticado'}), 401
 
     try:
+        logging.info(f"Listando archivos para usuario: {session.get('usuario')}")
         respuesta = enviar_comando("LISTAR")
+
+        # Log de la respuesta para debugging
+        logging.debug(f"Respuesta del servidor para LISTAR: {respuesta}")
+        print(f"Respuesta LISTAR: {respuesta}")
 
         # Parsear la respuesta para extraer los archivos
         files = []
+        if not respuesta or respuesta.strip() == "":
+            logging.warning("Respuesta vacía del servidor al listar archivos")
+            return jsonify({'files': [], 'warning': 'No se encontraron archivos'})
+
         for line in respuesta.strip().split('\n'):
             if line and not line.startswith('📄'):
-                parts = line.strip().split()
-                if len(parts) >= 4:
-                    name = parts[0]
-                    size = int(parts[1])
-                    date = ' '.join(parts[2:4])
+                try:
+                    parts = line.strip().split()
+                    if len(parts) >= 4:
+                        name = parts[0]
+                        size = int(parts[1])
+                        date = ' '.join(parts[2:4])
 
-                    files.append({
-                        'name': name,
-                        'size': size,
-                        'modified': date,
-                        'type': 'file'
-                    })
+                        files.append({
+                            'name': name,
+                            'size': size,
+                            'modified': date,
+                            'type': 'file'
+                        })
+                except Exception as parse_error:
+                    logging.error(f"Error al parsear línea '{line}': {parse_error}")
+                    continue
 
+        logging.info(f"Se encontraron {len(files)} archivos")
         return jsonify({'files': files})
     except Exception as e:
         logging.error(f"Error al listar archivos: {e}")
-        return jsonify({'error': 'Error al obtener archivos'}), 500
+        print(f"Error al listar archivos: {e}")
+        return jsonify({'error': f'Error al obtener archivos: {str(e)}'}), 500
 
 @app.route('/api/files/upload', methods=['POST'])
 def upload_file():
