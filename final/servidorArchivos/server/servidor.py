@@ -40,6 +40,9 @@ logging.basicConfig(
 )
 
 def manejar_cliente(conexion_ssl, direccion, directorio):
+    # Extraer solo la dirección IP
+    ip_cliente = direccion[0]
+
     try:
         # 👋 Enviar mensaje de bienvenida
         _enviar_mensaje(conexion_ssl, "🌍 Bienvenido al servidor de archivos seguro.\n")
@@ -51,11 +54,11 @@ def manejar_cliente(conexion_ssl, direccion, directorio):
         _procesar_comandos(conexion_ssl, directorio, usuario_id)
 
     except Exception as error:
-        logging.error(f"❌ Error con cliente {direccion}: {error}")
+        logging.error(f"❌ Error con cliente {ip_cliente}: {error}")
     finally:
         conexion_ssl.close()
-        logging.info(f"🔌 Cliente {direccion} desconectado")
-        print(f"🔌 Cliente {direccion} desconectado")
+        logging.info(f"🔌 Cliente {ip_cliente} desconectado")
+        print(f"🔌 Cliente {ip_cliente} desconectado")
 
 def _enviar_mensaje(conexion, mensaje):
     conexion.sendall(mensaje.encode('utf-8'))
@@ -177,7 +180,9 @@ def _escuchar_conexiones_socket(servidor, contexto, directorio):
             try:
                 # Aceptar conexión (bloqueante)
                 conexion, direccion = servidor.accept()
-                logging.info(f"✅ Nueva conexión desde {direccion} ({family_type})")
+                # Extraer solo la dirección IP
+                ip_cliente = direccion[0]
+                logging.info(f"✅ Nueva conexión desde {ip_cliente} ({family_type})")
 
                 try:
                     # Envolver con SSL
@@ -190,7 +195,7 @@ def _escuchar_conexiones_socket(servidor, contexto, directorio):
                         daemon=True
                     ).start()
                 except ssl.SSLError as error:
-                    logging.error(f"🔒 Error SSL con {direccion}: {error}")
+                    logging.error(f"🔒 Error SSL con {ip_cliente}: {error}")
                     conexion.close()
             except Exception as e:
                 logging.error(f"❌ Error al aceptar conexión {family_type}: {e}")

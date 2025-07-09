@@ -91,8 +91,10 @@ def _escuchar_conexiones_socket(servidor, contexto, directorio):
             try:
                 # Aceptar conexión (bloqueante)
                 conexion, direccion = servidor.accept()
-                logging.info(f"✅ Nueva conexión desde {direccion} ({family_type})")
-                print(f"✅ Nueva conexión desde {direccion} ({family_type})")
+                # Extraer solo la dirección IP (primer elemento de la tupla)
+                ip_cliente = direccion[0]
+                logging.info(f"✅ Nueva conexión desde {ip_cliente} ({family_type})")
+                print(f"✅ Nueva conexión desde {ip_cliente} ({family_type})")
 
                 try:
                     # Envolver con SSL
@@ -105,7 +107,7 @@ def _escuchar_conexiones_socket(servidor, contexto, directorio):
                         daemon=True
                     ).start()
                 except ssl.SSLError as error:
-                    logging.error(f"🔒 Error SSL con {direccion}: {error}")
+                    logging.error(f"🔒 Error SSL con {ip_cliente}: {error}")
                     conexion.close()
             except Exception as e:
                 logging.error(f"❌ Error al aceptar conexión {family_type}: {e}")
