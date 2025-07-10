@@ -144,12 +144,7 @@ def _esta_celery_instalado():
 
 def _crear_proceso_simulado(mensaje):
     print(mensaje)
-
-    class MockProcess:
-        def terminate(self):
-            pass
-
-    return MockProcess()
+    return None
 
 def _obtener_ruta_celery():
     import shutil
@@ -232,12 +227,7 @@ def iniciar_servidor_flask():
     if result == 0:  # Puerto ya está en uso
         print("⚠️  Puerto 5007 ya está en uso. La API REST podría no estar disponible.")
         print("   ℹ️  Intenta detener otros servidores Flask o usa un puerto diferente.")
-
-        # Devolver un hilo simulado para mantener la interfaz consistente
-        class MockThread:
-            def join(self):
-                pass
-        return MockThread()
+        return None
 
     # Función para ejecutar Flask en un hilo
     def run_flask():
@@ -269,7 +259,8 @@ def _iniciar_modo_servidor(args):
         iniciar_servidor_ssl(args.host, args.port, args.directorio)
     except KeyboardInterrupt:
         print("\n🛑 Apagando servidor, worker Celery y API Flask...")
-        worker_process.terminate()
+        if worker_process:
+            worker_process.terminate()
 
 def _iniciar_modo_cliente(args):
     cliente_host = os.getenv("CLIENTE_HOST", "127.0.0.1") if args.host == '0.0.0.0' else args.host

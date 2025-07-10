@@ -1,6 +1,7 @@
 import os
 import sys
 import socket
+from datetime import datetime
 
 # Configuración básica
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '../..')))
@@ -15,8 +16,20 @@ def listar_archivos(directorio_base):
         if not archivos:
             return "📂 No hay archivos en el servidor."
 
-        # Formatear la lista de archivos para mejor visualización
-        archivos_formateados = [f"{archivo}" for archivo in archivos]
+        # Formatear la lista de archivos incluyendo tamaño y fecha de modificación
+        archivos_formateados = []
+        for archivo in archivos:
+            ruta_completa = os.path.join(directorio_base, archivo)
+            if os.path.isfile(ruta_completa):
+                # Obtener tamaño en bytes
+                tamaño = os.path.getsize(ruta_completa)
+                # Obtener fecha de modificación
+                fecha_mod = os.path.getmtime(ruta_completa)
+                # Convertir timestamp a formato legible
+                fecha_str = datetime.fromtimestamp(fecha_mod).strftime('%Y-%m-%d %H:%M:%S')
+                # Formatear línea con nombre, tamaño y fecha
+                archivos_formateados.append(f"{archivo} {tamaño} {fecha_str}")
+
         return "\n".join(archivos_formateados)
     except Exception as error:
         return f"❌ Error al listar archivos: {error}"

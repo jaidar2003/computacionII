@@ -27,28 +27,16 @@ try:
         return app.task(func)
 
 except ImportError:
-    print("⚠️ Celery no está instalado. Usando implementación local para tareas.")
+    print("⚠️ Celery no está instalado. Las tareas no se ejecutarán.")
 
-    # Implementación básica para simular Celery cuando no está disponible
-    class MockTask:
-        def __init__(self, func):
-            self.func = func
-
-        def delay(self, *args, **kwargs):
-            # Ejecuta la función directamente en lugar de en segundo plano
-            return self.func(*args, **kwargs)
-
-    class MockCelery:
-        def __init__(self, *args, **kwargs):
-            pass
-
-        def task(self, func):
-            return MockTask(func)
-
-    app = MockCelery()
-
+    # Definir una función que lanzará una excepción si se intenta usar
     def task_decorator(func):
-        return MockTask(func)
+        def wrapper(*args, **kwargs):
+            raise ImportError("Celery no está instalado. No se pueden ejecutar tareas asíncronas.")
+        return wrapper
+
+    # Definir app como None para indicar que Celery no está disponible
+    app = None
 
 # 📊 Constantes para estados y mensajes
 ESTADO_OK = 'ok'
