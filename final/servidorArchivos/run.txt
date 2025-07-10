@@ -1,0 +1,13 @@
+
+MacOS
+
+python /Users/juanmaaidar/PycharmProjects/computacionII/final/servidorArchivos/main.py -m server
+
+python /Users/juanmaaidar/PycharmProjects/computacionII/final/servidorArchivos/main.py -m cliente
+
+cd final/servidorArchivos
+python main.py -m server
+
+Linux
+
+python /home/juanma/PycharmProjects/computacionII/final/servidorArchivos/main.py -m cliente

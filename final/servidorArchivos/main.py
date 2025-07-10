@@ -205,17 +205,70 @@ def _iniciar_proceso_celery(celery_path, root_dir):
 
 # La función configurar_argumentos se ha movido a utils/config.py
 
+def iniciar_servidor_flask():
+    from api.app import app
+    import threading
+    import logging
+    import socket
+
+    # Configurar Flask para que no muestre mensajes de inicio
+    # Esto suprime los mensajes "* Running on..." y "* Debug mode: off"
+    import flask.cli
+    flask.cli.show_server_banner = lambda *args, **kwargs: None
+
+    # Suprimir mensajes de logging de Flask y Werkzeug
+    log = logging.getLogger('werkzeug')
+    log.setLevel(logging.ERROR)
+
+    # Verificar si el puerto ya está en uso
+    flask_port = 5007
+    flask_host = '0.0.0.0'
+
+    # Verificar si el puerto ya está en uso
+    sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+    result = sock.connect_ex((flask_host, flask_port))
+    sock.close()
+
+    if result == 0:  # Puerto ya está en uso
+        print("⚠️  Puerto 5007 ya está en uso. La API REST podría no estar disponible.")
+        print("   ℹ️  Intenta detener otros servidores Flask o usa un puerto diferente.")
+
+        # Devolver un hilo simulado para mantener la interfaz consistente
+        class MockThread:
+            def join(self):
+                pass
+        return MockThread()
+
+    # Función para ejecutar Flask en un hilo
+    def run_flask():
+        try:
+            # Ejecutar Flask sin mensajes de inicio
+            app.run(host=flask_host, port=flask_port, debug=False)
+        except Exception as e:
+            print(f"❌ Error en el servidor Flask: {e}")
+
+    # Iniciar Flask en un hilo separado
+    flask_thread = threading.Thread(target=run_flask, daemon=True)
+    flask_thread.start()
+
+    # Mostrar mensajes personalizados con emojis
+    print(f"🚀 Servidor Flask API iniciado en {flask_host}:{flask_port}")
+    print(f"   ✅ API REST disponible en http://{flask_host}:{flask_port}/api")
+
+    return flask_thread
+
 def _iniciar_modo_servidor(args):
     print(f"🌍 Iniciando Servidor de Archivos Seguro en {args.host}:{args.port}...")
     if args.host != "127.0.0.1" and args.host != "localhost":
         print(f"   ℹ️  Si tienes problemas de conexión, verifica que la dirección IP sea accesible desde tus clientes.")
         print(f"   ℹ️  Para usar la dirección local estándar, ejecuta con: -H 127.0.0.1 o modifica SERVIDOR_HOST en .env")
     worker_process = iniciar_worker_celery()
+    flask_thread = iniciar_servidor_flask()  # Iniciar Flask
 
     try:
         iniciar_servidor_ssl(args.host, args.port, args.directorio)
     except KeyboardInterrupt:
-        print("\n🛑 Apagando servidor y worker Celery...")
+        print("\n🛑 Apagando servidor, worker Celery y API Flask...")
         worker_process.terminate()
 
 def _iniciar_modo_cliente(args):
@@ -239,13 +292,3 @@ if __name__ == "__main__":
         _iniciar_modo_servidor(args)
     else:
         _iniciar_modo_cliente(args)
-
-
-
-# mac
-# python /Users/juanmaaidar/PycharmProjects/computacionII/final/servidorArchivos/main.py -m server
-# python /Users/juanmaaidar/PycharmProjects/computacionII/final/servidorArchivos/main.py -m cliente
-
-# linux
-# python /home/juanma/PycharmProjects/computacionII/final/servidorArchivos/main.py -m server
-# python /home/juanma/PycharmProjects/computacionII/final/servidorArchivos/main.py -m cliente
