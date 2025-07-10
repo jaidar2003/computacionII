@@ -244,13 +244,18 @@ def list_files():
             return jsonify({'files': [], 'warning': 'No se encontraron archivos'})
 
         for line in respuesta.strip().split('\n'):
-            if line and not line.startswith('📄'):
+            if line:
                 try:
+                    # Si la línea comienza con el emoji, quitar el emoji
+                    if line.startswith('📄 '):
+                        line = line[2:].strip()
+
                     parts = line.strip().split()
-                    if len(parts) >= 4:
+                    if len(parts) >= 1:  # Al menos debe tener un nombre de archivo
                         name = parts[0]
-                        size = int(parts[1])
-                        date = ' '.join(parts[2:4])
+                        # Valores predeterminados en caso de que no haya información completa
+                        size = int(parts[1]) if len(parts) > 1 else 0
+                        date = ' '.join(parts[2:4]) if len(parts) > 3 else ''
 
                         files.append({
                             'name': name,
