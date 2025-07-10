@@ -5,8 +5,8 @@ python /Users/juanmaaidar/PycharmProjects/computacionII/final/servidorArchivos/m
 
 python /Users/juanmaaidar/PycharmProjects/computacionII/final/servidorArchivos/main.py -m cliente
 
-cd final/servidorArchivos
-python main.py -m server
+cd final/servidorArchivos/front
+npm run dev
 
 Linux
 
