@@ -253,14 +253,31 @@ def _iniciar_modo_servidor(args):
         print(f"   ℹ️  Si tienes problemas de conexión, verifica que la dirección IP sea accesible desde tus clientes.")
         print(f"   ℹ️  Para usar la dirección local estándar, ejecuta con: -H 127.0.0.1 o modifica SERVIDOR_HOST en .env")
     worker_process = iniciar_worker_celery()
-    flask_thread = iniciar_servidor_flask()  # Iniciar Flask
 
     try:
         iniciar_servidor_ssl(args.host, args.port, args.directorio)
     except KeyboardInterrupt:
-        print("\n🛑 Apagando servidor, worker Celery y API Flask...")
+        print("\n🛑 Apagando servidor y worker Celery...")
         if worker_process:
             worker_process.terminate()
+
+def _iniciar_modo_api(args):
+    print(f"🚀 Iniciando API Flask en 0.0.0.0:5007...")
+    print(f"   ℹ️  Asegúrate de que el servidor de archivos esté en ejecución en {args.host}:{args.port}")
+
+    # Actualizar las variables de entorno para la conexión al servidor
+    os.environ["SERVIDOR_HOST"] = args.host
+    os.environ["SERVIDOR_PORT"] = str(args.port)
+
+    flask_thread = iniciar_servidor_flask()
+
+    try:
+        # Mantener el proceso en ejecución
+        import time
+        while True:
+            time.sleep(1)
+    except KeyboardInterrupt:
+        print("\n🛑 Apagando API Flask...")
 
 def _iniciar_modo_cliente(args):
     cliente_host = os.getenv("CLIENTE_HOST", "127.0.0.1") if args.host == '0.0.0.0' else args.host
@@ -281,5 +298,7 @@ if __name__ == "__main__":
     # 🚀 Iniciar en el modo correspondiente
     if args.modo == 'server':
         _iniciar_modo_servidor(args)
+    elif args.modo == 'api':
+        _iniciar_modo_api(args)
     else:
         _iniciar_modo_cliente(args)

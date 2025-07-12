@@ -60,9 +60,9 @@ def configurar_argumentos(modo_dual=False):
         parser.add_argument(
             '-m', '--modo', 
             type=str, 
-            choices=['cliente', 'server'], 
+            choices=['cliente', 'server', 'api'], 
             default='server',
-            help='Modo de ejecución: cliente o server'
+            help='Modo de ejecución: cliente, server o api'
         )
     else:
         # Configuración para servidor.py (solo servidor)
