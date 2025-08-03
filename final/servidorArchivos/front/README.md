@@ -1,3 +1,9 @@
+# Universidad de Mendoza - Computación II
+
+Juan Manuel Aidar "62005"
+
+2024
+
 # Servidor de Archivos - Frontend
 
 Este es el frontend para el Servidor de Archivos Seguro, implementado con TypeScript y React.
@@ -57,6 +63,40 @@ npm run build
 
 Esto generará los archivos optimizados en el directorio `dist/`.
 
+## Despliegue en GitHub Pages
+
+### Preparación para el Despliegue
+
+Antes de desplegar, es necesario regenerar el archivo package-lock.json para resolver conflictos:
+
+```bash
+# Eliminar el package-lock.json actual
+rm package-lock.json
+
+# Regenerar el package-lock.json
+npm install
+```
+
+### Despliegue
+
+Para desplegar la aplicación en GitHub Pages:
+
+```bash
+npm run deploy
+```
+
+Este comando ejecutará automáticamente el script de construcción y luego desplegará la aplicación en GitHub Pages. La aplicación estará disponible en:
+
+https://jaidar2003.github.io/computacionII/
+
+### Configuración del Despliegue
+
+El despliegue en GitHub Pages está configurado con:
+
+1. **Base Path**: `/computacionII/` en `vite.config.ts`
+2. **Scripts de Despliegue**: `predeploy` y `deploy` en `package.json`
+3. **URL de la Página**: Configurada en el campo `homepage` de `package.json`
+
 ## Ejecución Completa (Frontend + Backend)
 
 Para ejecutar tanto el frontend como el backend juntos, puedes usar el script de desarrollo:
@@ -89,3 +129,4 @@ Este script:
 - **Styled Components**: Para estilos con CSS-in-JS
 - **Axios**: Para realizar peticiones HTTP
 - **Vite**: Para el empaquetado y servidor de desarrollo
+- **gh-pages**: Para el despliegue en GitHub Pages
