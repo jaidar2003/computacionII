@@ -221,7 +221,7 @@ const Dashboard: React.FC = () => {
         <MainContent>
           <ContentHeader>
             <h2>Mis Archivos</h2>
-            <RefreshButton onClick={fetchFiles}>Actualizar</RefreshButton>
+            <RefreshButton onClick={() => fetchFiles()}>Actualizar</RefreshButton>
           </ContentHeader>
 
           {error && <ErrorMessage>{error}</ErrorMessage>}

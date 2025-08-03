@@ -8,6 +8,7 @@ import subprocess
 import ssl
 import socket
 import selectors
+import re
 from dotenv import load_dotenv
 
 # 🛡️ Ignorar advertencias de deprecación
@@ -15,7 +16,6 @@ warnings.filterwarnings("ignore", category=DeprecationWarning)
 
 # 🔧 Asegurar que el path raíz esté en sys.path antes de cualquier import personalizado
 sys.path.append(os.path.abspath(os.path.dirname(__file__)))
-
 # 📚 Importaciones de módulos propios
 from server.servidor import manejar_cliente
 from baseDeDatos.db import crear_tablas
@@ -23,6 +23,7 @@ from cli.cliente import iniciar_cliente
 from utils.config import verificar_configuracion_env, crear_directorio_si_no_existe, configurar_argumentos
 from utils.config import CERT_PATH, KEY_PATH, BASE_DIR
 from utils.network import crear_socket_servidor, configurar_contexto_ssl
+from utils.ip import obtener_ip_local
 
 # 📝 Configurar logging
 logging.basicConfig(level=logging.INFO, format="%(asctime)s - %(levelname)s - %(message)s")
@@ -32,6 +33,21 @@ verificar_configuracion_env()
 
 # ⚙️ Crear tablas si no existen
 crear_tablas()
+
+def actualizar_ip_en_env(nueva_ip):
+    env_path = os.path.join(BASE_DIR, '.env')
+    
+    # Leer el contenido actual del archivo .env
+    with open(env_path, 'r') as file:
+        contenido = file.read()
+    
+    # Reemplazar la IP actual con la nueva IP
+    patron = r'SERVIDOR_HOST=.*'
+    nuevo_contenido = re.sub(patron, f'SERVIDOR_HOST={nueva_ip}', contenido)
+    
+    # Escribir el nuevo contenido al archivo .env
+    with open(env_path, 'w') as file:
+        file.write(nuevo_contenido)
 
 def iniciar_servidor_ssl(host=None, port=None, directorio=None):
     # Usar valores predeterminados si no se proporcionan
@@ -79,6 +95,23 @@ def iniciar_servidor_ssl(host=None, port=None, directorio=None):
         except KeyboardInterrupt:
             print("\n🛑 Apagando servidor...")
 
+    except OSError as error:
+        if "No se pudo crear un socket para escuchar conexiones" in str(error):
+            # Obtener la IP local correcta
+            ip_local = obtener_ip_local()
+            print(f"\n❌ Error: No se pudo iniciar el servidor en {host}")
+            print(f"🔄 Detectando IP local: {ip_local}")
+            
+            # Actualizar el archivo .env con la nueva IP
+            actualizar_ip_en_env(ip_local)
+            
+            print(f"✅ Archivo .env actualizado con la IP correcta: {ip_local}")
+            print("🔄 Reiniciando servidor con la nueva configuración...")
+            
+            # Reiniciar el servidor con la nueva IP
+            iniciar_servidor_ssl(ip_local, port, directorio)
+        else:
+            logging.error(f"❌ Error al iniciar el servidor: {error}")
     except Exception as error:
         logging.error(f"❌ Error al iniciar el servidor: {error}")
 
@@ -249,9 +282,10 @@ def iniciar_servidor_flask():
 
 def _iniciar_modo_servidor(args):
     print(f"🌍 Iniciando Servidor de Archivos Seguro en {args.host}:{args.port}...")
-    if args.host != "127.0.0.1" and args.host != "localhost":
+    if args.host != "127.0.0.1" and args.host != "localhost" and args.host != "0.0.0.0":
         print(f"   ℹ️  Si tienes problemas de conexión, verifica que la dirección IP sea accesible desde tus clientes.")
         print(f"   ℹ️  Para usar la dirección local estándar, ejecuta con: -H 127.0.0.1 o modifica SERVIDOR_HOST en .env")
+        print(f"   ℹ️  El sistema intentará detectar automáticamente tu IP local si la configurada no es válida.")
     worker_process = iniciar_worker_celery()
 
     try:
