@@ -8,9 +8,6 @@ python /Users/juanmaaidar/PycharmProjects/computacionII/final/servidorArchivos/m
 # O iniciar solo la API Flask (requiere que el servidor de archivos esté en ejecución)
 python /Users/juanmaaidar/PycharmProjects/computacionII/final/servidorArchivos/main.py -m api -H 192.168.100.146 -p 5005
 
-# Iniciar el cliente
-python /Users/juanmaaidar/PycharmProjects/computacionII/final/servidorArchivos/main.py -m cliente
-
 # Iniciar el frontend
 cd final/servidorArchivos/front
 # Editar el archivo .env para configurar VITE_API_URL si la API está en otra máquina
@@ -24,6 +21,3 @@ python /home/juanma/PycharmProjects/computacionII/final/servidorArchivos/main.py
 
 # O iniciar solo la API Flask (requiere que el servidor de archivos esté en ejecución)
 python /home/juanma/PycharmProjects/computacionII/final/servidorArchivos/main.py -m api -H 192.168.100.146 -p 5005
-
-# Iniciar el cliente
-python /home/juanma/PycharmProjects/computacionII/final/servidorArchivos/main.py -m cliente
