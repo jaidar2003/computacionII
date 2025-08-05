@@ -99,17 +99,13 @@ def iniciar_servidor_ssl(host=None, port=None, directorio=None):
         if "No se pudo crear un socket para escuchar conexiones" in str(error):
             # Obtener la IP local correcta
             ip_local = obtener_ip_local()
-            print(f"\n❌ Error: No se pudo iniciar el servidor en {host}")
-            print(f"🔄 Detectando IP local: {ip_local}")
-            
-            # Actualizar el archivo .env con la nueva IP
-            actualizar_ip_en_env(ip_local)
-            
-            print(f"✅ Archivo .env actualizado con la IP correcta: {ip_local}")
-            print("🔄 Reiniciando servidor con la nueva configuración...")
-            
-            # Reiniciar el servidor con la nueva IP
-            iniciar_servidor_ssl(ip_local, port, directorio)
+            print(f"\n❌ ERROR: No se pudo iniciar el servidor en {host}")
+            print(f"❌ Si te equivocaste con la dirección IP, el servidor no puede conectarse a {host}")
+            print(f"ℹ️ La dirección IP local detectada es: {ip_local}")
+            print(f"ℹ️ Para usar esta IP, ejecuta el servidor con: -H {ip_local}")
+            print(f"ℹ️ O modifica SERVIDOR_HOST={ip_local} en el archivo .env")
+            # Salir con código de error
+            sys.exit(1)
         else:
             logging.error(f"❌ Error al iniciar el servidor: {error}")
     except Exception as error:

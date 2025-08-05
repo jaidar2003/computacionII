@@ -4,9 +4,25 @@ import ssl
 import os
 
 def crear_socket_servidor(host, port, return_socket=True):
-    # Obtener información de direcciones para IPv4 e IPv6
-    addr_info = socket.getaddrinfo(host, port, socket.AF_UNSPEC, socket.SOCK_STREAM)
-
+    # Validar la dirección IP antes de continuar
+    try:
+        # Intentar validar la dirección IP
+        socket.inet_aton(host)
+    except socket.error:
+        # Si no es una dirección IPv4 válida, verificar si es un nombre de host válido
+        try:
+            socket.gethostbyname(host)
+        except socket.gaierror:
+            # No es una dirección IP válida ni un nombre de host válido
+            raise OSError(f"No se pudo crear un socket para escuchar conexiones: Dirección IP inválida '{host}'")
+    
+    try:
+        # Obtener información de direcciones para IPv4 e IPv6
+        addr_info = socket.getaddrinfo(host, port, socket.AF_UNSPEC, socket.SOCK_STREAM)
+    except socket.gaierror:
+        # Error al resolver la dirección
+        raise OSError(f"No se pudo crear un socket para escuchar conexiones: No se puede resolver la dirección '{host}'")
+    
     # Lista para almacenar los sockets creados exitosamente
     sockets_creados = []
 
