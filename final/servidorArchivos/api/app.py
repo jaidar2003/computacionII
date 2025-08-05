@@ -14,7 +14,7 @@ sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
 load_dotenv()
 
 # Importaciones de módulos propios
-from cli.cliente.seguridad_ssl import establecer_conexion_ssl
+from utils.ssl_utils import establecer_conexion_ssl
 from utils.config import verificar_configuracion_env
 
 # Verificar configuración del archivo .env
