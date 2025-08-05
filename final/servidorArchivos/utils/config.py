@@ -51,18 +51,18 @@ def verificar_configuracion_env():
 
 def configurar_argumentos(modo_dual=False):
     if modo_dual:
-        # Configuración para main.py (cliente/servidor)
+        # Configuración para main.py (servidor/api)
         parser = argparse.ArgumentParser(
-            description='🔐 Cliente/Servidor de Archivos Seguro',
+            description='🔐 Servidor de Archivos Seguro',
             formatter_class=argparse.ArgumentDefaultsHelpFormatter
         )
 
         parser.add_argument(
             '-m', '--modo', 
             type=str, 
-            choices=['cliente', 'server', 'api'], 
+            choices=['server', 'api'], 
             default='server',
-            help='Modo de ejecución: cliente, server o api'
+            help='Modo de ejecución: server o api'
         )
     else:
         # Configuración para servidor.py (solo servidor)

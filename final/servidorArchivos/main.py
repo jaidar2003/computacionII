@@ -19,7 +19,6 @@ sys.path.append(os.path.abspath(os.path.dirname(__file__)))
 # 📚 Importaciones de módulos propios
 from server.servidor import manejar_cliente
 from baseDeDatos.db import crear_tablas
-from cli.cliente import iniciar_cliente
 from utils.config import verificar_configuracion_env, crear_directorio_si_no_existe, configurar_argumentos
 from utils.config import CERT_PATH, KEY_PATH, BASE_DIR
 from utils.network import crear_socket_servidor, configurar_contexto_ssl
@@ -309,13 +308,6 @@ def _iniciar_modo_api(args):
     except KeyboardInterrupt:
         print("\n🛑 Apagando API Flask...")
 
-def _iniciar_modo_cliente(args):
-    cliente_host = os.getenv("CLIENTE_HOST", "127.0.0.1") if args.host == '0.0.0.0' else args.host
-
-    if args.verbose:
-        print(f"🌍 Conectando al Servidor de Archivos Seguro en {cliente_host}:{args.port}...")
-
-    iniciar_cliente(cliente_host, args.port)
 
 if __name__ == "__main__":
     # 📋 Obtener argumentos de línea de comandos
@@ -330,5 +322,3 @@ if __name__ == "__main__":
         _iniciar_modo_servidor(args)
     elif args.modo == 'api':
         _iniciar_modo_api(args)
-    else:
-        _iniciar_modo_cliente(args)
