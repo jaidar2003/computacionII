@@ -6,7 +6,7 @@ MacOS
 python /Users/juanmaaidar/PycharmProjects/computacionII/final/servidorArchivos/main.py -m server
 
 # O iniciar solo la API Flask (requiere que el servidor de archivos esté en ejecución)
-python /Users/juanmaaidar/PycharmProjects/computacionII/final/servidorArchivos/main.py -m api -H 192.168.100.146 -p 5005
+python /Users/juanmaaidar/PycharmProjects/computacionII/final/servidorArchivos/main.py -m api -H 192.168.100.191 -p 5005
 
 # Iniciar el frontend
 cd final/servidorArchivos/front
@@ -16,13 +16,9 @@ npm run dev
 Linux
 =====
 
-# Iniciar el servidor de archivos
-python /home/juanma/PycharmProjects/computacionII/final/servidorArchivos/main.py -m server
+# Iniciar solo la API Flask (requiere que el servidor de archivos esté en ejecución)
+python /home/juanma/PycharmProjects/computacionII/final/servidorArchivos/main.py -m api -H 192.168.100.191 -p 5005
 
-# O iniciar solo la API Flask (requiere que el servidor de archivos esté en ejecución)
-python /home/juanma/PycharmProjects/computacionII/final/servidorArchivos/main.py -m api -H 192.168.100.146 -p 5005
-
-
+# Iniciar el worker de Celery para procesamiento en segundo plano
 cd /Users/juanmaaidar/PycharmProjects/computacionII/final/servidorArchivos
 celery -A tareas.celery worker --loglevel=info
-
