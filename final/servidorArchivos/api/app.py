@@ -101,7 +101,9 @@ def enviar_comando(comando, conexion=None):
 
         # Recibir respuesta (descartar prompt si es necesario)
         if comando.upper() != "SALIR":
-            respuesta = conexion.recv(1024).decode('utf-8')
+            # Aumentar el tamaño del buffer para manejar respuestas más grandes
+            buffer_size = 8192  # 8KB buffer
+            respuesta = conexion.recv(buffer_size).decode('utf-8')
             return respuesta
 
         return "Comando enviado"
@@ -293,8 +295,14 @@ def upload_file():
         # Guardar archivo temporalmente
         file.save(filepath)
 
-        # Enviar comando de subida
-        comando = f"SUBIR {filename}"
+        # Calcular hash SHA-256
+        import hashlib
+        with open(filepath, 'rb') as f:
+            file_hash = hashlib.sha256(f.read()).hexdigest()
+            logging.info(f"Hash calculado para {filename}: {file_hash}")
+
+        # Enviar comando de subida con hash
+        comando = f"SUBIR {filename} {file_hash}"
 
         # Establecer conexión
         conexion = conectar_servidor()
@@ -459,6 +467,10 @@ def rename_file():
 def verify_file(filename):
     if 'usuario' not in session:
         return jsonify({'error': 'No autenticado'}), 401
+    
+    # Verificar que el usuario tenga permisos de lectura
+    if session.get('permisos') not in ['lectura', 'escritura', 'admin']:
+        return jsonify({'error': 'No tienes permisos suficientes para verificar archivos'}), 403
 
     filename = secure_filename(filename)
 
@@ -468,17 +480,46 @@ def verify_file(filename):
 
         # Extraer información relevante de la respuesta
         estado = "desconocido"
-        if "OK" in respuesta:
+        detalles = ""
+        
+        # Verificar si hay información de verificación
+        if "No hay información de verificación" in respuesta:
+            estado = "sin_info"
+            detalles = "No se encontró información de verificación para este archivo. Intente subir el archivo nuevamente."
+        # Verificar estado basado en el contenido de la respuesta
+        elif "OK -" in respuesta or "ok" in respuesta.lower():
             estado = "ok"
+            detalles = "El archivo ha sido verificado y está en buen estado."
         elif "CORRUPTO" in respuesta:
             estado = "corrupto"
+            detalles = "El archivo está corrupto o ha sido modificado."
         elif "INFECTADO" in respuesta:
             estado = "infectado"
+            detalles = "El archivo podría contener malware."
+        
+        # Extraer información adicional si está disponible
+        info_integridad = None
+        info_virus = None
+        
+        if "Integridad: " in respuesta:
+            try:
+                info_integridad = respuesta.split("Integridad: ")[1].split(" -")[0].strip()
+            except:
+                pass
+                
+        if "Antivirus: " in respuesta:
+            try:
+                info_virus = respuesta.split("Antivirus: ")[1].split(" -")[0].strip()
+            except:
+                pass
 
         return jsonify({
             'success': True, 
             'filename': filename,
             'status': estado,
+            'details': detalles,
+            'integrity': info_integridad,
+            'antivirus': info_virus,
             'message': respuesta
         })
     except Exception as e:

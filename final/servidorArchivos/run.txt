@@ -21,3 +21,8 @@ python /home/juanma/PycharmProjects/computacionII/final/servidorArchivos/main.py
 
 # O iniciar solo la API Flask (requiere que el servidor de archivos esté en ejecución)
 python /home/juanma/PycharmProjects/computacionII/final/servidorArchivos/main.py -m api -H 192.168.100.146 -p 5005
+
+
+cd /Users/juanmaaidar/PycharmProjects/computacionII/final/servidorArchivos
+celery -A tareas.celery worker --loglevel=info
+

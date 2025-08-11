@@ -9,9 +9,6 @@ sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '../..')
 # Importar decoradores desde el nuevo módulo
 from .decoradores import validar_argumentos, requiere_permiso
 
-# Importar utilidades compartidas
-from comandos.utilidades import _enviar_mensaje
-
 # Importar manejadores de comandos
 from .manejadores import (
     _cmd_listar_archivos, _cmd_crear_archivo, _cmd_eliminar_archivo,

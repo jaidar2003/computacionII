@@ -110,10 +110,15 @@ def iniciar_servidor_ssl(host=None, port=None, directorio=None):
     except Exception as error:
         logging.error(f"❌ Error al iniciar el servidor: {error}")
 
+# Conjunto global para rastrear IPs que ya se han conectado
+_ips_conectadas = set()
+
 def _escuchar_conexiones_socket(servidor, contexto, directorio):
     family_type = "IPv6" if servidor.family == socket.AF_INET6 else "IPv4"
     print(f"👂 Esperando conexiones {family_type} entrantes...")
-
+    
+    global _ips_conectadas
+    
     try:
         while True:
             try:
@@ -122,7 +127,11 @@ def _escuchar_conexiones_socket(servidor, contexto, directorio):
                 # Extraer solo la dirección IP (primer elemento de la tupla)
                 ip_cliente = direccion[0]
                 logging.info(f"✅ Nueva conexión desde {ip_cliente} ({family_type})")
-                print(f"✅ Nueva conexión desde {ip_cliente} ({family_type})")
+                
+                # Solo mostrar mensaje si es la primera vez que vemos esta IP
+                if ip_cliente not in _ips_conectadas:
+                    print(f"✅ Nueva conexión desde {ip_cliente} ({family_type})")
+                    _ips_conectadas.add(ip_cliente)
 
                 try:
                     # Envolver con SSL

@@ -8,7 +8,10 @@ sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '../..')
 
 from tareas.celery import verificar_integridad_y_virus
 from baseDeDatos.db import obtener_conexion
-from .utilidades import _enviar_mensaje
+
+def _enviar_mensaje(conexion, mensaje):
+    if conexion:
+        conexion.sendall(mensaje.encode('utf-8'))
 
 def listar_archivos(directorio_base):
     try:
@@ -219,16 +222,38 @@ def verificar_estado_archivo(directorio_base, nombre_archivo):
         if not os.path.exists(ruta):
             return f"⚠️ Archivo '{nombre_archivo}' no encontrado."
 
+        # Obtener la fecha de modificación del archivo
+        fecha_mod = os.path.getmtime(ruta)
+        
         # Consultar estado en la base de datos
+        # Buscar el registro de verificación más reciente después de la última modificación del archivo
         conn = obtener_conexion()
         cursor = conn.cursor()
+        
+        # Primero intentamos buscar por nombre o ruta (por si acaso)
         cursor.execute("""
-            SELECT accion, mensaje FROM log_eventos 
-            WHERE accion = 'VERIFICACION' AND mensaje LIKE ? 
+            SELECT accion, mensaje, fecha FROM log_eventos 
+            WHERE accion = 'VERIFICACION' AND 
+            (mensaje LIKE ? OR mensaje LIKE ?)
             ORDER BY fecha DESC LIMIT 1
-        """, (f"%{nombre_archivo}%",))
-
+        """, (f"%{nombre_archivo}%", f"%{ruta}%"))
+        
         resultado = cursor.fetchone()
+        
+        # Si no encontramos nada, buscamos el registro de verificación más reciente
+        if not resultado:
+            # Convertir fecha_mod a formato de fecha de SQLite
+            from datetime import datetime
+            fecha_mod_str = datetime.fromtimestamp(fecha_mod).strftime('%Y-%m-%d %H:%M:%S')
+            
+            cursor.execute("""
+                SELECT accion, mensaje, fecha FROM log_eventos 
+                WHERE accion = 'VERIFICACION' AND fecha > ?
+                ORDER BY fecha DESC LIMIT 1
+            """, (fecha_mod_str,))
+            
+            resultado = cursor.fetchone()
+        
         conn.close()
 
         if resultado:
@@ -257,13 +282,31 @@ def verificar_estado_todos_archivos(directorio_base):
             if not os.path.isfile(ruta):
                 continue
 
+            # Primero intentamos buscar por nombre o ruta
             cursor.execute("""
-                SELECT accion, mensaje FROM log_eventos 
-                WHERE accion = 'VERIFICACION' AND mensaje LIKE ? 
+                SELECT accion, mensaje, fecha FROM log_eventos 
+                WHERE accion = 'VERIFICACION' AND 
+                (mensaje LIKE ? OR mensaje LIKE ?)
                 ORDER BY fecha DESC LIMIT 1
-            """, (f"%{nombre_archivo}%",))
+            """, (f"%{nombre_archivo}%", f"%{ruta}%"))
 
             resultado = cursor.fetchone()
+            
+            # Si no encontramos nada, buscamos el registro de verificación más reciente después de la última modificación
+            if not resultado:
+                # Obtener la fecha de modificación del archivo
+                fecha_mod = os.path.getmtime(ruta)
+                # Convertir fecha_mod a formato de fecha de SQLite
+                fecha_mod_str = datetime.fromtimestamp(fecha_mod).strftime('%Y-%m-%d %H:%M:%S')
+                
+                cursor.execute("""
+                    SELECT accion, mensaje, fecha FROM log_eventos 
+                    WHERE accion = 'VERIFICACION' AND fecha > ?
+                    ORDER BY fecha DESC LIMIT 1
+                """, (fecha_mod_str,))
+                
+                resultado = cursor.fetchone()
+
             if resultado:
                 estado = resultado[1]
                 # Extraer solo la parte relevante del mensaje

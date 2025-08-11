@@ -39,10 +39,18 @@ logging.basicConfig(
     format='%(asctime)s - %(levelname)s - %(message)s'
 )
 
+# Conjunto global para rastrear IPs desconectadas
+_ips_desconectadas = set()
+
 def manejar_cliente(conexion_ssl, direccion, directorio):
     # Extraer solo la dirección IP
     ip_cliente = direccion[0]
-
+    
+    global _ips_desconectadas
+    
+    # Variable para rastrear si el cliente envió SALIR explícitamente
+    cliente_desconectado = False
+    
     try:
         # 👋 Enviar mensaje de bienvenida
         _enviar_mensaje(conexion_ssl, "🌍 Bienvenido al servidor de archivos seguro.\n")
@@ -51,14 +59,27 @@ def manejar_cliente(conexion_ssl, direccion, directorio):
         usuario_id, permisos = _autenticar_usuario(conexion_ssl)
 
         # 💻 Procesar comandos del usuario
-        _procesar_comandos(conexion_ssl, directorio, usuario_id)
+        cliente_desconectado = _procesar_comandos(conexion_ssl, directorio, usuario_id)
 
     except Exception as error:
         logging.error(f"❌ Error con cliente {ip_cliente}: {error}")
     finally:
         conexion_ssl.close()
         logging.info(f"🔌 Cliente {ip_cliente} desconectado")
-        print(f"🔌 Cliente {ip_cliente} desconectado")
+        
+        # Solo mostrar mensaje si:
+        # 1. El cliente envió SALIR explícitamente
+        # 2. No es una conexión de la API (que siempre envía SALIR al cerrar)
+        # 3. Es la primera vez que esta IP se desconecta
+        
+        # Obtener la IP del servidor para comparar
+        servidor_ip = socket.gethostbyname(socket.gethostname())
+        es_conexion_api = ip_cliente == "127.0.0.1" or ip_cliente == servidor_ip or ip_cliente == "::1"
+        
+        if cliente_desconectado and not es_conexion_api:
+            if ip_cliente not in _ips_desconectadas:
+                print(f"🔌 Cliente {ip_cliente} desconectado")
+                _ips_desconectadas.add(ip_cliente)
 
 def _enviar_mensaje(conexion, mensaje):
     conexion.sendall(mensaje.encode('utf-8'))
@@ -108,7 +129,7 @@ def _procesar_comandos(conexion, directorio, usuario_id):
 
         if comando.upper() == "SALIR":
             _enviar_mensaje(conexion, "🔌 Desconectando...\n")
-            break
+            return True  # Indica que el cliente se desconectó explícitamente
 
         # Verificar si es un comando que requiere conexión
         partes = comando.strip().split()
@@ -118,6 +139,8 @@ def _procesar_comandos(conexion, directorio, usuario_id):
             respuesta = manejar_comando(comando, directorio, usuario_id)
 
         _enviar_mensaje(conexion, f"📄 {respuesta}\n")
+    
+    return False  # Por defecto, no se considera una desconexión explícita
 
 
 def iniciar_servidor(host=None, port=None, directorio=None):
