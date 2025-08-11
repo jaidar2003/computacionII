@@ -20,7 +20,13 @@ const Dashboard: React.FC = () => {
   const [uploadProgress, setUploadProgress] = useState<number | null>(null);
   const [isRenameModalOpen, setIsRenameModalOpen] = useState(false);
   const [newFileName, setNewFileName] = useState('');
-  const [verificationStatus, setVerificationStatus] = useState<{status: string, message: string} | null>(null);
+  const [verificationStatus, setVerificationStatus] = useState<{
+    status: string, 
+    message: string,
+    details?: string,
+    integrity?: string | null,
+    antivirus?: string | null
+  } | null>(null);
 
   // Fetch files on component mount and periodically refresh
   useEffect(() => {
@@ -144,17 +150,30 @@ const Dashboard: React.FC = () => {
 
   const handleFileVerify = async (fileName: string) => {
     try {
+      setError(null); // Limpiar errores anteriores
+      
       const response = await axios.get(`/api/files/verify/${fileName}`, { withCredentials: true });
 
       if (response.data.success) {
         setVerificationStatus({
           status: response.data.status,
-          message: response.data.message
+          message: response.data.message,
+          details: response.data.details,
+          integrity: response.data.integrity,
+          antivirus: response.data.antivirus
         });
       }
     } catch (err: any) {
-      setError(err.response?.data?.error || 'Error al verificar archivo');
       console.error('Error verifying file:', err);
+      
+      // Mostrar mensaje de error más descriptivo
+      if (err.response?.status === 401) {
+        setError('Debes iniciar sesión para verificar archivos');
+      } else if (err.response?.status === 403) {
+        setError('No tienes permisos suficientes para verificar archivos');
+      } else {
+        setError(err.response?.data?.error || 'Error al verificar archivo');
+      }
     }
   };
 
@@ -282,7 +301,37 @@ const Dashboard: React.FC = () => {
       {verificationStatus && (
         <VerificationStatus status={verificationStatus.status}>
           <h3>Resultado de la Verificación</h3>
-          <p>{verificationStatus.message}</p>
+          
+          {/* Mostrar detalles si están disponibles */}
+          {verificationStatus.details && (
+            <VerificationDetails>
+              {verificationStatus.details}
+            </VerificationDetails>
+          )}
+          
+          {/* Mostrar información de integridad y antivirus si está disponible */}
+          {(verificationStatus.integrity || verificationStatus.antivirus) && (
+            <VerificationInfo>
+              {verificationStatus.integrity && (
+                <InfoItem>
+                  <InfoLabel>Integridad:</InfoLabel>
+                  <InfoValue>{verificationStatus.integrity}</InfoValue>
+                </InfoItem>
+              )}
+              {verificationStatus.antivirus && (
+                <InfoItem>
+                  <InfoLabel>Antivirus:</InfoLabel>
+                  <InfoValue>{verificationStatus.antivirus}</InfoValue>
+                </InfoItem>
+              )}
+            </VerificationInfo>
+          )}
+          
+          {/* Mostrar mensaje original para información detallada */}
+          <VerificationMessage>
+            {verificationStatus.message}
+          </VerificationMessage>
+          
           <Button onClick={() => setVerificationStatus(null)}>Cerrar</Button>
         </VerificationStatus>
       )}
@@ -616,23 +665,74 @@ const VerificationStatus = styled.div<{ status: string }>`
       case 'ok': return '#4caf50';
       case 'corrupto': return '#f44336';
       case 'infectado': return '#ff9800';
+      case 'sin_info': return '#ff9800';
       default: return '#2196f3';
     }
   }};
   max-width: 400px;
   z-index: 900;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
 
   h3 {
     margin-top: 0;
+    margin-bottom: 5px;
     color: ${props => {
       switch(props.status) {
         case 'ok': return '#4caf50';
         case 'corrupto': return '#f44336';
         case 'infectado': return '#ff9800';
+        case 'sin_info': return '#ff9800';
         default: return '#2196f3';
       }
     }};
   }
+`;
+
+const VerificationDetails = styled.div`
+  font-size: 16px;
+  font-weight: 500;
+  margin-bottom: 10px;
+  color: ${props => props.theme.color || '#333'};
+`;
+
+const VerificationInfo = styled.div`
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+  background-color: #f5f5f5;
+  padding: 10px;
+  border-radius: 4px;
+  margin-bottom: 10px;
+`;
+
+const InfoItem = styled.div`
+  display: flex;
+  align-items: center;
+`;
+
+const InfoLabel = styled.span`
+  font-weight: 500;
+  margin-right: 5px;
+  min-width: 80px;
+`;
+
+const InfoValue = styled.span`
+  color: #666;
+`;
+
+const VerificationMessage = styled.div`
+  font-size: 12px;
+  color: #666;
+  background-color: #f9f9f9;
+  padding: 8px;
+  border-radius: 4px;
+  margin-bottom: 10px;
+  max-height: 100px;
+  overflow-y: auto;
+  white-space: pre-wrap;
+  word-break: break-word;
 `;
 
 export default Dashboard;
