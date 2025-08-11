@@ -291,9 +291,11 @@ def upload_file():
     filename = secure_filename(file.filename)
     filepath = os.path.join(UPLOAD_FOLDER, filename)
 
+    conexion = None
     try:
         # Guardar archivo temporalmente
         file.save(filepath)
+        logging.info(f"Archivo guardado temporalmente en {filepath}")
 
         # Calcular hash SHA-256
         import hashlib
@@ -301,60 +303,135 @@ def upload_file():
             file_hash = hashlib.sha256(f.read()).hexdigest()
             logging.info(f"Hash calculado para {filename}: {file_hash}")
 
+        # Obtener tamaño del archivo
+        file_size = os.path.getsize(filepath)
+        logging.info(f"Tamaño del archivo {filename}: {file_size} bytes")
+
+        # Verificar que el archivo no sea demasiado grande
+        max_size = 100 * 1024 * 1024  # 100 MB
+        if file_size > max_size:
+            return jsonify({'error': f'El archivo es demasiado grande. Tamaño máximo: {max_size/1024/1024} MB'}), 413
+
         # Enviar comando de subida con hash
         comando = f"SUBIR {filename} {file_hash}"
+        logging.info(f"Comando de subida: {comando}")
 
-        # Establecer conexión
-        conexion = conectar_servidor()
+        # Establecer conexión con timeout aumentado
+        try:
+            conexion = conectar_servidor()
+            # Configurar timeout más largo para archivos grandes
+            conexion.settimeout(300)  # 5 minutos
+        except Exception as e:
+            logging.error(f"Error al conectar con el servidor: {e}")
+            return jsonify({'error': f'Error al conectar con el servidor: {str(e)}'}), 500
 
-        # Autenticar
-        conexion.recv(1024)  # Descartar mensaje de bienvenida
-        conexion.recv(1024)  # Descartar prompt de usuario
-        conexion.sendall(session['usuario'].encode('utf-8'))
-        conexion.recv(1024)  # Descartar prompt de contraseña
-        conexion.sendall(session['password'].encode('utf-8'))
-        respuesta_auth = conexion.recv(1024).decode('utf-8')
+        try:
+            # Autenticar
+            conexion.recv(1024)  # Descartar mensaje de bienvenida
+            conexion.recv(1024)  # Descartar prompt de usuario
+            conexion.sendall(session['usuario'].encode('utf-8'))
+            conexion.recv(1024)  # Descartar prompt de contraseña
+            conexion.sendall(session['password'].encode('utf-8'))
+            respuesta_auth = conexion.recv(1024).decode('utf-8')
 
-        if "✅ Autenticación exitosa" not in respuesta_auth:
-            return jsonify({'error': 'Error de autenticación'}), 401
+            if "✅ Autenticación exitosa" not in respuesta_auth:
+                logging.error(f"Error de autenticación: {respuesta_auth}")
+                return jsonify({'error': 'Error de autenticación'}), 401
 
-        # Descartar prompt de comando
-        conexion.recv(1024)
+            # Descartar prompt de comando
+            conexion.recv(1024)
 
-        # Enviar comando de subida
-        conexion.sendall(comando.encode('utf-8'))
+            # Enviar comando de subida
+            conexion.sendall(comando.encode('utf-8'))
+            logging.info(f"Comando enviado: {comando}")
 
-        # Leer respuesta inicial (confirmación para enviar archivo)
-        respuesta = conexion.recv(1024).decode('utf-8')
+            # Leer respuesta inicial (confirmación para enviar archivo)
+            respuesta = conexion.recv(1024).decode('utf-8')
+            logging.info(f"Respuesta del servidor: {respuesta}")
+        except socket.timeout as e:
+            logging.error(f"Timeout durante la autenticación o envío de comando: {e}")
+            return jsonify({'error': f'Tiempo de espera agotado durante la comunicación con el servidor: {str(e)}'}), 504
+        except Exception as e:
+            logging.error(f"Error durante la autenticación o envío de comando: {e}")
+            return jsonify({'error': f'Error durante la comunicación con el servidor: {str(e)}'}), 500
 
         if "Listo para recibir" in respuesta:
-            # Enviar archivo
-            with open(filepath, 'rb') as f:
-                data = f.read()
-                conexion.sendall(data)
-
-            # Leer respuesta final
-            respuesta_final = conexion.recv(1024).decode('utf-8')
-
-            # Cerrar conexión
-            conexion.sendall("SALIR".encode('utf-8'))
-            conexion.close()
-
-            # Eliminar archivo temporal
-            os.remove(filepath)
-
-            if "✅" in respuesta_final:
-                return jsonify({'success': True, 'message': 'Archivo subido correctamente'})
-            else:
-                return jsonify({'error': respuesta_final}), 500
+            try:
+                # Enviar archivo
+                with open(filepath, 'rb') as f:
+                    # Obtener tamaño del archivo
+                    f.seek(0, os.SEEK_END)
+                    tamaño = f.tell()
+                    f.seek(0)  # Volver al inicio del archivo
+                    
+                    logging.info(f"Iniciando transferencia de archivo {filename} ({tamaño} bytes)")
+                    
+                    # Enviar primero el tamaño del archivo
+                    conexion.sendall(str(tamaño).encode('utf-8') + b'\n')
+                    
+                    # Enviar el archivo en chunks para evitar problemas de memoria
+                    chunk_size = 8192  # 8KB chunks
+                    bytes_enviados = 0
+                    
+                    try:
+                        while bytes_enviados < tamaño:
+                            chunk = f.read(min(chunk_size, tamaño - bytes_enviados))
+                            if not chunk:
+                                break
+                            conexion.sendall(chunk)
+                            bytes_enviados += len(chunk)
+                            
+                            # Registrar progreso cada 1MB
+                            if bytes_enviados % (1024 * 1024) == 0:
+                                logging.info(f"Progreso: {bytes_enviados}/{tamaño} bytes ({bytes_enviados/tamaño*100:.1f}%)")
+                        
+                        logging.info(f"Transferencia completada: {bytes_enviados}/{tamaño} bytes para {filename}")
+                    except socket.timeout as e:
+                        logging.error(f"Timeout durante la transferencia del archivo: {e}")
+                        return jsonify({'error': f'Tiempo de espera agotado durante la transferencia del archivo. Intente con un archivo más pequeño o cuando la red esté menos congestionada.'}), 504
+                    except ConnectionError as e:
+                        logging.error(f"Error de conexión durante la transferencia: {e}")
+                        return jsonify({'error': f'La conexión se cerró durante la transferencia del archivo: {str(e)}'}), 500
+                
+                # Leer respuesta final
+                try:
+                    respuesta_final = conexion.recv(1024).decode('utf-8')
+                    logging.info(f"Respuesta final del servidor: {respuesta_final}")
+                except socket.timeout:
+                    logging.warning("Timeout al esperar respuesta final, pero el archivo podría haberse subido correctamente")
+                    return jsonify({'warning': 'No se recibió confirmación del servidor, pero el archivo podría haberse subido correctamente. Verifique en la lista de archivos.'}), 202
+                
+                if "✅" in respuesta_final:
+                    return jsonify({'success': True, 'message': 'Archivo subido correctamente'})
+                else:
+                    logging.error(f"Error en respuesta final: {respuesta_final}")
+                    return jsonify({'error': respuesta_final}), 500
+            except Exception as e:
+                logging.error(f"Error durante la transferencia del archivo: {e}")
+                return jsonify({'error': f'Error durante la transferencia del archivo: {str(e)}'}), 500
         else:
+            logging.error(f"El servidor no está listo para recibir: {respuesta}")
             return jsonify({'error': respuesta}), 500
     except Exception as e:
         logging.error(f"Error al subir archivo: {e}")
-        # Asegurarse de eliminar el archivo temporal si existe
-        if os.path.exists(filepath):
-            os.remove(filepath)
         return jsonify({'error': f'Error al subir archivo: {str(e)}'}), 500
+    finally:
+        # Limpiar recursos
+        if conexion:
+            try:
+                conexion.sendall("SALIR".encode('utf-8'))
+                conexion.close()
+                logging.info("Conexión cerrada correctamente")
+            except:
+                logging.warning("No se pudo cerrar la conexión limpiamente")
+        
+        # Eliminar archivo temporal
+        if os.path.exists(filepath):
+            try:
+                os.remove(filepath)
+                logging.info(f"Archivo temporal eliminado: {filepath}")
+            except Exception as e:
+                logging.warning(f"No se pudo eliminar el archivo temporal {filepath}: {e}")
 
 @app.route('/api/files/download/<filename>', methods=['GET'])
 def download_file(filename):

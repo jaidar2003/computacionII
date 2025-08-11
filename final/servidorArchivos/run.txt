@@ -1,24 +1,46 @@
 
+INSTRUCCIONES DE INICIO
+=====================
+
+⚠️ IMPORTANTE: Para que el sistema funcione correctamente, es necesario ejecutar TRES componentes:
+1. El servidor principal (gestiona archivos y conexiones)
+2. La API Flask (interfaz para el frontend)
+3. El worker de Celery (procesa verificaciones en segundo plano)
+
+Si no se ejecuta el worker de Celery, las verificaciones de archivos no funcionarán correctamente.
+
 MacOS
 =====
 
-# Iniciar el servidor de archivos
+# 1. Iniciar el servidor de archivos (en una terminal)
 python /Users/juanmaaidar/PycharmProjects/computacionII/final/servidorArchivos/main.py -m server
 
-# O iniciar solo la API Flask (requiere que el servidor de archivos esté en ejecución)
+# 2. Iniciar la API Flask (en otra terminal)
 python /Users/juanmaaidar/PycharmProjects/computacionII/final/servidorArchivos/main.py -m api -H 192.168.100.191 -p 5005
 
-# Iniciar el frontend
-cd final/servidorArchivos/front
+# 3. Iniciar el worker de Celery (en otra terminal) - OBLIGATORIO para verificaciones
+cd /Users/juanmaaidar/PycharmProjects/computacionII/final/servidorArchivos
+celery -A tareas.celery worker --loglevel=info
+
+# 4. Iniciar el frontend (en otra terminal)
+cd /Users/juanmaaidar/PycharmProjects/computacionII/final/servidorArchivos/front
 # Editar el archivo .env para configurar VITE_API_URL si la API está en otra máquina
 npm run dev
 
 Linux
 =====
 
-# Iniciar solo la API Flask (requiere que el servidor de archivos esté en ejecución)
+# 1. Iniciar el servidor de archivos (en una terminal)
+python /home/juanma/PycharmProjects/computacionII/final/servidorArchivos/main.py -m server
+
+# 2. Iniciar la API Flask (en otra terminal)
 python /home/juanma/PycharmProjects/computacionII/final/servidorArchivos/main.py -m api -H 192.168.100.191 -p 5005
 
-# Iniciar el worker de Celery para procesamiento en segundo plano
-cd /Users/juanmaaidar/PycharmProjects/computacionII/final/servidorArchivos
+# 3. Iniciar el worker de Celery (en otra terminal) - OBLIGATORIO para verificaciones
+cd /home/juanma/PycharmProjects/computacionII/final/servidorArchivos
 celery -A tareas.celery worker --loglevel=info
+
+# 4. Iniciar el frontend (en otra terminal)
+cd /home/juanma/PycharmProjects/computacionII/final/servidorArchivos/front
+# Editar el archivo .env para configurar VITE_API_URL si la API está en otra máquina
+npm run dev

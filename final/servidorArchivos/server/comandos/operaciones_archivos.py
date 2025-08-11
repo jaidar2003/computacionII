@@ -82,7 +82,8 @@ def crear_archivo(directorio_base, nombre_archivo, hash_esperado=None, conexion=
             _enviar_mensaje(conexion, f"✅ Archivo '{nombre_archivo}' recibido correctamente ({bytes_recibidos} bytes)")
         else:
             # Crear archivo vacío (comportamiento actual)
-            with open(ruta, 'w') as _:
+            # Usar modo binario para evitar problemas de codificación con nombres de archivo
+            with open(ruta, 'wb') as _:
                 pass
 
         # Iniciar verificación en segundo plano
