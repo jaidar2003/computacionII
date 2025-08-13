@@ -21,7 +21,7 @@ from server.servidor import manejar_cliente
 from baseDeDatos.db import crear_tablas
 from utils.config import verificar_configuracion_env, crear_directorio_si_no_existe, configurar_argumentos
 from utils.config import CERT_PATH, KEY_PATH, BASE_DIR
-from utils.network import crear_socket_servidor, configurar_contexto_ssl
+from utils.network import crear_socket_servidor, configurar_contexto_ssl, verificar_stack
 from utils.ip import obtener_ip_local
 
 # 📝 Configurar logging
@@ -62,8 +62,27 @@ def iniciar_servidor_ssl(host=None, port=None, directorio=None):
         return
 
     try:
-        # 🌐 Configurar sockets para IPv4 e IPv6
-        sockets_servidor = crear_socket_servidor(host, port)
+        # 🌐 Verificar stack de red disponible (IPv4/IPv6)
+        stack_disponible = verificar_stack()
+        
+        if not stack_disponible['ipv4'] and not stack_disponible['ipv6']:
+            logging.error("❌ No hay stack de red disponible (ni IPv4 ni IPv6)")
+            print("❌ No se pudo iniciar el servidor: No hay stack de red disponible")
+            return
+            
+        print("🔍 Verificación de stack de red:")
+        if stack_disponible['ipv4']:
+            print("   ✅ IPv4 (0.0.0.0) disponible")
+        else:
+            print("   ❌ IPv4 no disponible")
+            
+        if stack_disponible['ipv6']:
+            print("   ✅ IPv6 (::) disponible")
+        else:
+            print("   ❌ IPv6 no disponible")
+        
+        # 🌐 Configurar sockets para IPv4 e IPv6 según disponibilidad
+        sockets_servidor = crear_socket_servidor(host, port, stack_disponible=stack_disponible)
 
         # Verificar si se crearon sockets
         if not sockets_servidor:
