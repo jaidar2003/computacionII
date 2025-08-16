@@ -589,6 +589,49 @@ def verify_file(filename):
                 info_virus = respuesta.split("Antivirus: ")[1].split(" -")[0].strip()
             except:
                 pass
+        
+        # Obtener el hash del archivo .hash si existe
+        hash_value = None
+        hash_file_path = os.path.join(os.getenv("SERVIDOR_DIR"), f"{filename}.hash")
+        
+        # Verificar si existe el archivo de hash en el servidor
+        try:
+            # Enviar comando para verificar si existe el archivo hash
+            hash_check = enviar_comando(f"LISTAR {filename}.hash")
+            logging.info(f"Resultado de verificación de existencia del hash: {hash_check}")
+            
+            if "No hay archivos" not in hash_check and "no encontrado" not in hash_check:
+                # El archivo hash existe, obtener su contenido
+                hash_response = enviar_comando(f"DESCARGAR {filename}.hash")
+                logging.info(f"Respuesta completa al descargar hash: {hash_response}")
+                
+                # Limpiar el hash (eliminar mensajes adicionales)
+                if hash_response:
+                    # Método 1: Extraer después del checkmark
+                    if "✅" in hash_response:
+                        hash_value = hash_response.split("✅")[1].strip()
+                        logging.info(f"Hash después de split por ✅: {hash_value}")
+                        
+                        # Limpiar cualquier texto adicional después del hash
+                        if "enviado correctamente" in hash_value:
+                            hash_value = hash_value.split("enviado correctamente")[0].strip()
+                        
+                        # Eliminar cualquier texto que no sea parte del hash (64 caracteres hexadecimales)
+                        import re
+                        hash_match = re.search(r'[0-9a-f]{64}', hash_value)
+                        if hash_match:
+                            hash_value = hash_match.group(0)
+                    
+                    # Método 2: Si el método 1 falló, intentar extraer directamente el patrón de hash
+                    if not hash_value or len(hash_value) != 64:
+                        import re
+                        hash_match = re.search(r'[0-9a-f]{64}', hash_response)
+                        if hash_match:
+                            hash_value = hash_match.group(0)
+                
+                logging.info(f"Hash final extraído: {hash_value}")
+        except Exception as e:
+            logging.warning(f"No se pudo obtener el hash para {filename}: {e}")
 
         return jsonify({
             'success': True, 
@@ -597,6 +640,7 @@ def verify_file(filename):
             'details': detalles,
             'integrity': info_integridad,
             'antivirus': info_virus,
+            'hash': hash_value,  # Añadir el hash a la respuesta
             'message': respuesta
         })
     except Exception as e:

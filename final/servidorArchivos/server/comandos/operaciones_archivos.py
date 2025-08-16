@@ -1,6 +1,7 @@
 import os
 import sys
 import socket
+import hashlib
 from datetime import datetime
 
 # Configuración básica
@@ -86,6 +87,14 @@ def crear_archivo(directorio_base, nombre_archivo, hash_esperado=None, conexion=
             with open(ruta, 'wb') as _:
                 pass
 
+        # Calcular el hash del archivo
+        hash_calculado = _calcular_hash_archivo(ruta)
+        
+        # Crear archivo de hash con el mismo nombre pero con extensión .hash
+        ruta_hash = f"{ruta}.hash"
+        with open(ruta_hash, 'w') as f:
+            f.write(hash_calculado)
+
         # Iniciar verificación en segundo plano
         _iniciar_verificacion(ruta, hash_esperado)
 
@@ -114,6 +123,13 @@ def eliminar_archivo(directorio_base, nombre_archivo):
 
         # Eliminar archivo
         os.remove(ruta)
+        
+        # Eliminar archivo de hash si existe
+        ruta_hash = f"{ruta}.hash"
+        if os.path.exists(ruta_hash):
+            os.remove(ruta_hash)
+            return f"🗑️ Archivo '{nombre_archivo}' y su hash eliminados correctamente."
+            
         return f"🗑️ Archivo '{nombre_archivo}' eliminado correctamente."
     except Exception as error:
         return f"❌ Error al eliminar archivo: {error}"
@@ -138,6 +154,15 @@ def renombrar_archivo(directorio_base, nombre_viejo, nombre_nuevo):
 
         # Renombrar archivo
         os.rename(ruta_vieja, ruta_nueva)
+        
+        # Renombrar archivo de hash si existe
+        ruta_hash_vieja = f"{ruta_vieja}.hash"
+        ruta_hash_nueva = f"{ruta_nueva}.hash"
+        
+        if os.path.exists(ruta_hash_vieja):
+            os.rename(ruta_hash_vieja, ruta_hash_nueva)
+            return f"✏️ Archivo '{nombre_viejo}' y su hash renombrados a '{nombre_nuevo}'."
+            
         return f"✏️ Archivo '{nombre_viejo}' renombrado a '{nombre_nuevo}'."
     except Exception as error:
         return f"❌ Error al renombrar archivo: {error}"
@@ -146,6 +171,20 @@ def _es_nombre_archivo_valido(nombre):
     # Caracteres prohibidos en nombres de archivo
     caracteres_prohibidos = ['/', '\\', ':', '*', '?', '"', '<', '>', '|']
     return not any(c in nombre for c in caracteres_prohibidos)
+
+def _calcular_hash_archivo(ruta_archivo):
+    """
+    Calcula el hash SHA-256 de un archivo.
+    
+    Args:
+        ruta_archivo: Ruta completa al archivo
+        
+    Returns:
+        str: Hash SHA-256 en formato hexadecimal
+    """
+    with open(ruta_archivo, 'rb') as archivo:
+        contenido = archivo.read()
+        return hashlib.sha256(contenido).hexdigest()
 
 def _iniciar_verificacion(ruta, hash_esperado=None):
     verificar_integridad_y_virus.delay(ruta, hash_esperado)
