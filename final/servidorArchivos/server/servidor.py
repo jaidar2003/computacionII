@@ -65,18 +65,19 @@ def manejar_cliente(conexion_ssl, direccion, directorio):
         logging.error(f"❌ Error con cliente {ip_cliente}: {error}")
     finally:
         conexion_ssl.close()
-        logging.info(f"🔌 Cliente {ip_cliente} desconectado")
-        
-        # Solo mostrar mensaje si:
-        # 1. El cliente envió SALIR explícitamente
-        # 2. No es una conexión de la API (que siempre envía SALIR al cerrar)
-        # 3. Es la primera vez que esta IP se desconecta
         
         # Obtener la IP del servidor para comparar
         servidor_ip = socket.gethostbyname(socket.gethostname())
         es_conexion_api = ip_cliente == "127.0.0.1" or ip_cliente == servidor_ip or ip_cliente == "::1"
         
+        # Solo registrar y mostrar mensaje si:
+        # 1. El cliente envió SALIR explícitamente
+        # 2. No es una conexión de la API (que siempre envía SALIR al cerrar)
         if cliente_desconectado and not es_conexion_api:
+            # Registrar en el log
+            logging.info(f"🔌 Cliente {ip_cliente} desconectado")
+            
+            # Mostrar en consola si es la primera vez
             if ip_cliente not in _ips_desconectadas:
                 print(f"🔌 Cliente {ip_cliente} desconectado")
                 _ips_desconectadas.add(ip_cliente)
