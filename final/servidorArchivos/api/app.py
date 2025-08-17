@@ -4,6 +4,7 @@ import ssl
 import socket
 import json
 import logging
+import select
 from flask import Flask, request, jsonify, session, send_file
 from flask_cors import CORS
 from werkzeug.utils import secure_filename
@@ -101,10 +102,30 @@ def enviar_comando(comando, conexion=None):
 
         # Recibir respuesta (descartar prompt si es necesario)
         if comando.upper() != "SALIR":
-            # Aumentar el tamaño del buffer para manejar respuestas más grandes
-            buffer_size = 8192  # 8KB buffer
-            respuesta = conexion.recv(buffer_size).decode('utf-8')
-            return respuesta
+            # Aumentar el tamaño del buffer y manejar respuestas grandes
+            buffer_size = 32768  # 32KB buffer
+            respuesta_completa = ""
+            while True:
+                parte = conexion.recv(buffer_size).decode('utf-8')
+                respuesta_completa += parte
+                
+                # Si la respuesta es más pequeña que el buffer, hemos terminado
+                if len(parte) < buffer_size:
+                    break
+                
+                # Verificar si hay más datos disponibles
+                # (Opcional: puedes agregar un pequeño timeout aquí)
+                conexion.settimeout(0.5)
+                try:
+                    if not select.select([conexion], [], [], 0.1)[0]:
+                        break
+                except:
+                    break
+                finally:
+                    # Restaurar timeout normal
+                    conexion.settimeout(None)
+
+            return respuesta_completa
 
         return "Comando enviado"
     except Exception as e:
@@ -466,7 +487,9 @@ def download_file(filename):
         # Leer respuesta inicial
         respuesta = conexion.recv(1024).decode('utf-8')
 
-        if "Enviando archivo" in respuesta:
+        if "Listo para enviar" in respuesta:
+            # Enviar confirmación "LISTO" al servidor
+            conexion.sendall("LISTO".encode('utf-8'))
             # Recibir y guardar archivo
             with open(download_path, 'wb') as f:
                 while True:
@@ -646,6 +669,159 @@ def verify_file(filename):
     except Exception as e:
         logging.error(f"Error al verificar archivo: {e}")
         return jsonify({'error': f'Error al verificar archivo: {str(e)}'}), 500
+
+# Endpoint para solicitar cambio de permisos
+@app.route('/api/permissions/request', methods=['POST'])
+def request_permissions():
+    if 'usuario' not in session:
+        return jsonify({'error': 'No autenticado'}), 401
+    
+    data = request.json
+    permission_type = data.get('permissionType')
+    
+    if not permission_type:
+        return jsonify({'error': 'Tipo de permiso requerido'}), 400
+    
+    try:
+        comando = f"SOLICITAR_PERMISOS {permission_type}"
+        respuesta = enviar_comando(comando)
+        
+        if "✅" in respuesta:
+            return jsonify({'success': True, 'message': respuesta})
+        else:
+            return jsonify({'error': respuesta}), 400
+    except Exception as e:
+        logging.error(f"Error al solicitar permisos: {e}")
+        return jsonify({'error': f'Error al solicitar permisos: {str(e)}'}), 500
+
+# Endpoint para ver solicitudes de permisos
+@app.route('/api/permissions/requests', methods=['GET'])
+def view_permission_requests():
+    if 'usuario' not in session:
+        return jsonify({'error': 'No autenticado'}), 401
+    
+    try:
+        comando = "VER_SOLICITUDES"
+        respuesta = enviar_comando(comando)
+        
+        # Parsear la respuesta para extraer las solicitudes
+        requests = []
+        if "No hay solicitudes" not in respuesta:
+            for line in respuesta.strip().split('\n'):
+                if "ID:" in line:
+                    try:
+                        # Extraer información de la línea
+                        request_info = {}
+                        
+                        # Extraer ID
+                        id_part = line.split('ID:')[1].split('|')[0].strip()
+                        request_info['id'] = id_part
+                        
+                        # Extraer usuario si es admin
+                        if "Usuario:" in line:
+                            user_part = line.split('Usuario:')[1].split('|')[0].strip()
+                            request_info['username'] = user_part
+                        
+                        # Extraer permiso
+                        if "Permiso:" in line:
+                            perm_part = line.split('Permiso:')[1].split('|')[0].strip()
+                            request_info['permission'] = perm_part
+                        
+                        # Extraer estado si no es admin
+                        if "Estado:" in line:
+                            state_part = line.split('Estado:')[1].split('|')[0].strip()
+                            request_info['status'] = state_part
+                        
+                        # Extraer fecha
+                        if "Fecha:" in line:
+                            date_part = line.split('Fecha:')[1].strip()
+                            request_info['date'] = date_part
+                        
+                        requests.append(request_info)
+                    except Exception as parse_error:
+                        logging.error(f"Error al parsear línea '{line}': {parse_error}")
+                        continue
+        
+        return jsonify({'requests': requests, 'rawResponse': respuesta})
+    except Exception as e:
+        logging.error(f"Error al ver solicitudes: {e}")
+        return jsonify({'error': f'Error al ver solicitudes: {str(e)}'}), 500
+
+# Endpoint para aprobar/rechazar solicitudes de permisos (solo admin)
+@app.route('/api/permissions/approve', methods=['POST'])
+def approve_permission():
+    if 'usuario' not in session:
+        return jsonify({'error': 'No autenticado'}), 401
+    
+    # Verificar que el usuario sea administrador
+    if session.get('permisos') != 'admin':
+        return jsonify({'error': 'No tienes permisos de administrador'}), 403
+    
+    data = request.json
+    request_id = data.get('requestId')
+    decision = data.get('decision')  # 'aprobar' o 'rechazar'
+    
+    if not request_id or not decision:
+        return jsonify({'error': 'ID de solicitud y decisión son requeridos'}), 400
+    
+    try:
+        comando = f"APROBAR_PERMISOS {request_id} {decision}"
+        respuesta = enviar_comando(comando)
+        
+        if "✅" in respuesta or "⛔" in respuesta:
+            return jsonify({'success': True, 'message': respuesta})
+        else:
+            return jsonify({'error': respuesta}), 400
+    except Exception as e:
+        logging.error(f"Error al aprobar/rechazar solicitud: {e}")
+        return jsonify({'error': f'Error al procesar solicitud: {str(e)}'}), 500
+
+# Endpoint para listar usuarios (solo admin)
+@app.route('/api/users', methods=['GET'])
+def list_users():
+    if 'usuario' not in session:
+        return jsonify({'error': 'No autenticado'}), 401
+    
+    # Verificar que el usuario sea administrador
+    if session.get('permisos') != 'admin':
+        return jsonify({'error': 'No tienes permisos de administrador'}), 403
+    
+    try:
+        comando = "LISTAR_USUARIOS"
+        respuesta = enviar_comando(comando)
+        
+        # Parsear la respuesta para extraer los usuarios
+        users = []
+        if "No hay usuarios" not in respuesta:
+            for line in respuesta.strip().split('\n'):
+                if "ID:" in line:
+                    try:
+                        # Extraer información de la línea
+                        user_info = {}
+                        
+                        # Extraer ID
+                        id_part = line.split('ID:')[1].split('|')[0].strip()
+                        user_info['id'] = id_part
+                        
+                        # Extraer nombre de usuario
+                        if "Usuario:" in line:
+                            user_part = line.split('Usuario:')[1].split('|')[0].strip()
+                            user_info['username'] = user_part
+                        
+                        # Extraer permiso
+                        if "Permiso:" in line:
+                            perm_part = line.split('Permiso:')[1].strip()
+                            user_info['permission'] = perm_part
+                        
+                        users.append(user_info)
+                    except Exception as parse_error:
+                        logging.error(f"Error al parsear línea '{line}': {parse_error}")
+                        continue
+        
+        return jsonify({'users': users, 'rawResponse': respuesta})
+    except Exception as e:
+        logging.error(f"Error al listar usuarios: {e}")
+        return jsonify({'error': f'Error al listar usuarios: {str(e)}'}), 500
 
 if __name__ == '__main__':
     app.run(host='0.0.0.0', port=5007, debug=True)

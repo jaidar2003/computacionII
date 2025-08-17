@@ -9,7 +9,7 @@ from baseDeDatos.db import obtener_conexion
 
 def solicitar_cambio_permisos(usuario_id, permiso_solicitado):
     # 🔍 Validar el permiso solicitado
-    permisos_validos = ['lectura', 'escritura', 'admin']
+    permisos_validos = ['usuario', 'admin']
     if permiso_solicitado not in permisos_validos:
         return f"❌ Permiso inválido. Opciones válidas: {', '.join(permisos_validos)}"
 
@@ -155,8 +155,7 @@ def _formatear_resultado_solicitudes(solicitudes, es_admin):
 
     # Emojis para los permisos
     emojis_permiso = {
-        'lectura': '📖',
-        'escritura': '✏️',
+        'usuario': '👤',
         'admin': '👑'
     }
 
@@ -237,8 +236,7 @@ def listar_usuarios_sistema():
 
         # Emojis para los permisos
         emojis_permiso = {
-            'lectura': '📖',
-            'escritura': '✏️',
+            'usuario': '👤',
             'admin': '👑'
         }
 
@@ -278,8 +276,7 @@ def _actualizar_estado_solicitud(cursor, id_solicitud, estado):
 def _procesar_decision(cursor, decision, id_solicitud, solicitante_id, solicitante_username, permiso_solicitado):
     # Emojis para los permisos
     emojis_permiso = {
-        'lectura': '📖',
-        'escritura': '✏️',
+        'usuario': '👤',
         'admin': '👑'
     }
     emoji_permiso = emojis_permiso.get(permiso_solicitado, '🔑')
