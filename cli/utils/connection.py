@@ -4,8 +4,14 @@ import os
 
 def create_ssl_connection(host, port):
     """Crea una conexión SSL con el servidor"""
-    # Crear socket
-    sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+    # Determinar si la dirección es IPv6
+    is_ipv6 = ':' in host
+    
+    # Crear socket con el tipo adecuado
+    if is_ipv6:
+        sock = socket.socket(socket.AF_INET6, socket.SOCK_STREAM)
+    else:
+        sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
     
     # Configurar contexto SSL
     context = ssl.create_default_context()
