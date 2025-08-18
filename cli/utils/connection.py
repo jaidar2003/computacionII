@@ -7,21 +7,54 @@ def create_ssl_connection(host, port):
     # Determinar si la dirección es IPv6
     is_ipv6 = ':' in host
     
-    # Crear socket con el tipo adecuado
-    if is_ipv6:
-        sock = socket.socket(socket.AF_INET6, socket.SOCK_STREAM)
-    else:
-        sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-    
     # Configurar contexto SSL
     context = ssl.create_default_context()
     context.check_hostname = False
     context.verify_mode = ssl.CERT_NONE  # No verificar certificado (solo para desarrollo)
     
     try:
-        # Conectar al servidor
-        sock.connect((host, port))
-        ssl_sock = context.wrap_socket(sock, server_hostname=host)
+        # Manejar direcciones IPv6 link-local con identificador de zona
+        if is_ipv6 and '%' in host:
+            # Crear socket IPv6
+            sock = socket.socket(socket.AF_INET6, socket.SOCK_STREAM)
+            
+            # Separar la dirección IPv6 del identificador de zona y el puerto
+            if ':' in host.split('%')[1]:  # Si hay un puerto después del identificador de zona
+                addr_parts = host.split('%')
+                ipv6_addr = addr_parts[0]
+                zone_port_parts = addr_parts[1].split(':')
+                zone_id = zone_port_parts[0]
+                # El puerto ya viene como parámetro, no necesitamos extraerlo
+            else:
+                ipv6_addr = host.split('%')[0]
+                zone_id = host.split('%')[1]
+            
+            try:
+                # Obtener el índice de la interfaz a partir del identificador de zona
+                if_idx = socket.if_nametoindex(zone_id)
+                # Conectar usando la dirección IPv6, puerto, flow info y scope id
+                sock.connect((ipv6_addr, port, 0, if_idx))
+            except (socket.error, OSError) as e:
+                print(f"❌ Error al conectar con IPv6 link-local: {str(e)}")
+                print("ℹ️ Intentando conexión alternativa...")
+                # Intentar una conexión alternativa sin el índice de interfaz
+                try:
+                    sock.connect((host, port))
+                except Exception as e2:
+                    print(f"❌ Error en conexión alternativa: {str(e2)}")
+                    return None
+        else:
+            # Crear socket con el tipo adecuado para direcciones normales
+            if is_ipv6:
+                sock = socket.socket(socket.AF_INET6, socket.SOCK_STREAM)
+            else:
+                sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+            
+            # Conectar al servidor
+            sock.connect((host, port))
+        
+        # Envolver la conexión con SSL
+        ssl_sock = context.wrap_socket(sock, server_hostname=host.split('%')[0] if '%' in host else host)
         return ssl_sock
     except Exception as e:
         print(f"❌ Error al conectar con el servidor: {str(e)}")
