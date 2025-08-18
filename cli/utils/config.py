@@ -9,5 +9,5 @@ os.makedirs(CONFIG_DIR, exist_ok=True)
 SESSION_FILE = os.path.join(CONFIG_DIR, "session.json")
 
 # Configuración del servidor
-SERVER_HOST = "::"  # Dirección IP del servidor (localhost IPv4)
+SERVER_HOST = "192.168.100.191"  # Dirección IP del servidor (localhost IPv4)
 SERVER_PORT = 5005  # Puerto del servidor
