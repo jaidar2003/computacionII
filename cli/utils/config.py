@@ -8,5 +8,6 @@ os.makedirs(CONFIG_DIR, exist_ok=True)
 # Archivo de sesión
 SESSION_FILE = os.path.join(CONFIG_DIR, "session.json")
 
-# URL base de la API
-API_URL = "http://localhost:5000/api"  # Ajustar según la configuración del servidor
+# Configuración del servidor
+SERVER_HOST = ::  # Dirección IP del servidor
+SERVER_PORT = 5005         # Puerto del servidor (por defecto 1608)
