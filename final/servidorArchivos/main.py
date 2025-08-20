@@ -120,8 +120,13 @@ def iniciar_servidor_ssl(host=None, port=None, directorio=None):
             print(f"\n❌ ERROR: No se pudo iniciar el servidor en {host}")
             print(f"❌ Si te equivocaste con la dirección IP, el servidor no puede conectarse a {host}")
             print(f"ℹ️ La dirección IP local detectada es: {ip_local}")
-            print(f"ℹ️ Para usar esta IP, ejecuta el servidor con: -H {ip_local}")
-            print(f"ℹ️ O modifica SERVIDOR_HOST={ip_local} en el archivo .env")
+            
+            # Actualizar automáticamente la IP en el archivo .env
+            print(f"🔄 Actualizando automáticamente SERVIDOR_HOST={ip_local} en el archivo .env")
+            actualizar_ip_en_env(ip_local)
+            print(f"✅ Archivo .env actualizado correctamente. Reinicia el servidor para aplicar los cambios.")
+            print(f"ℹ️ Para usar esta IP manualmente, ejecuta el servidor con: -H {ip_local}")
+            
             # Salir con código de error
             sys.exit(1)
         else:
@@ -305,6 +310,15 @@ def iniciar_servidor_flask():
 
 def _iniciar_modo_servidor(args):
     print(f"🌍 Iniciando Servidor de Archivos Seguro en {args.host}:{args.port}...")
+    
+    # Verificar si la IP proporcionada es diferente de la configurada en .env
+    ip_env = os.getenv("SERVIDOR_HOST", "127.0.0.1")
+    if args.host != ip_env:
+        print(f"   ℹ️  La dirección IP proporcionada ({args.host}) es diferente de la configurada en .env ({ip_env})")
+        print(f"   🔄 Actualizando automáticamente SERVIDOR_HOST={args.host} en el archivo .env")
+        actualizar_ip_en_env(args.host)
+        print(f"   ✅ Archivo .env actualizado correctamente.")
+    
     if args.host != "127.0.0.1" and args.host != "localhost" and args.host != "0.0.0.0":
         print(f"   ℹ️  Si tienes problemas de conexión, verifica que la dirección IP sea accesible desde tus clientes.")
         print(f"   ℹ️  Para usar la dirección local estándar, ejecuta con: -H 127.0.0.1 o modifica SERVIDOR_HOST en .env")

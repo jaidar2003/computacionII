@@ -6,7 +6,7 @@ import os
 # Add the parent directory to the Python path
 sys.path.insert(0, os.path.abspath(os.path.dirname(os.path.dirname(__file__))))
 
-from cli.commands import auth, files, permissions
+from cli.commands import auth, files, permissions, config
 from cli.utils.visual import print_info, print_error, print_header, BOLD, RESET
 
 def main():
@@ -68,6 +68,10 @@ def main():
     
     # Comandos de utilidad
     status_parser = subparsers.add_parser('status', help='Mostrar estado de la sesión')
+    
+    # Comandos de configuración
+    config_server_parser = subparsers.add_parser('config-server', help='Configurar dirección IP del servidor')
+    config_server_parser.add_argument('ip', nargs='?', help='Nueva dirección IP del servidor (opcional)')
     
     # Alias comunes
     subparsers.add_parser('ls', help='Alias para list').set_defaults(command='list')
@@ -132,6 +136,9 @@ def main():
         else:
             print_error("No hay sesión activa")
             print_info("Usa el comando 'login' para iniciar sesión")
+    elif args.command == 'config-server':
+        # Configurar dirección IP del servidor
+        config.update_server_ip(getattr(args, 'ip', None))
     else:
         parser.print_help()
         sys.exit(1)

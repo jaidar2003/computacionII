@@ -1,3 +1,5 @@
+# servidor.py — Variante 2 (hardening): IPv4 + IPv6 con hilos accept() separados
+
 import socket
 import ssl
 import threading
@@ -7,10 +9,10 @@ import sys
 import argparse
 from dotenv import load_dotenv
 
-# Configuración básica
+# Configuración básica de sys.path
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
 
-# Importaciones con manejo de errores
+# Importaciones con fallback
 try:
     from server.comandos import manejar_comando
     from server.seguridad import autenticar_usuario_en_servidor, registrar_usuario
@@ -26,12 +28,10 @@ from utils.network import crear_socket_servidor, configurar_contexto_ssl
 
 load_dotenv()
 
-# Configuración de logging
-# Configuración: Los logs se guardan en el directorio "historial" al mismo nivel que "servidorArchivos"
+# Configuración de logging a archivo en final/historial
 base_dir = os.path.dirname(os.path.dirname(os.path.dirname(__file__)))  # Directorio "final"
 log_dir = os.path.join(base_dir, "historial")
-if not os.path.exists(log_dir):
-    os.makedirs(log_dir)
+os.makedirs(log_dir, exist_ok=True)
 
 logging.basicConfig(
     filename=os.path.join(log_dir, 'servidor.log'),
@@ -39,79 +39,18 @@ logging.basicConfig(
     format='%(asctime)s - %(levelname)s - %(message)s'
 )
 
-# Conjunto global para rastrear IPs desconectadas
+# Conjunto global para rastrear IPs desconectadas (solo para mostrar una vez)
 _ips_desconectadas = set()
 
-def manejar_cliente(conexion_ssl, direccion, directorio):
-    # Extraer solo la dirección IP
-    ip_cliente = direccion[0]
-    
-    global _ips_desconectadas
-    
-    # Variable para rastrear si el cliente envió SALIR explícitamente
-    cliente_desconectado = False
-    
-    try:
-        # 👋 Enviar mensaje de bienvenida
-        _enviar_mensaje(conexion_ssl, "🌍 Bienvenido al servidor de archivos seguro.\n")
-
-        # 🔐 Autenticar al usuario
-        usuario_id, permisos = _autenticar_usuario(conexion_ssl)
-
-        # 💻 Procesar comandos del usuario
-        cliente_desconectado = _procesar_comandos(conexion_ssl, directorio, usuario_id)
-
-    except Exception as error:
-        logging.error(f"❌ Error con cliente {ip_cliente}: {error}")
-    finally:
-        conexion_ssl.close()
-        
-        # Obtener la IP del servidor para comparar
-        servidor_ip = socket.gethostbyname(socket.gethostname())
-        es_conexion_api = ip_cliente == "127.0.0.1" or ip_cliente == servidor_ip or ip_cliente == "::1"
-        
-        # Solo registrar y mostrar mensaje si:
-        # 1. El cliente envió SALIR explícitamente
-        # 2. No es una conexión de la API (que siempre envía SALIR al cerrar)
-        if cliente_desconectado and not es_conexion_api:
-            # Registrar en el log
-            logging.info(f"🔌 Cliente {ip_cliente} desconectado")
-            
-            # Mostrar en consola si es la primera vez
-            if ip_cliente not in _ips_desconectadas:
-                print(f"🔌 Cliente {ip_cliente} desconectado")
-                _ips_desconectadas.add(ip_cliente)
-
-def _enviar_mensaje(conexion, mensaje):
+def _enviar_mensaje(conexion, mensaje: str):
     conexion.sendall(mensaje.encode('utf-8'))
 
-def _recibir_mensaje(conexion, prompt=None):
+def _recibir_mensaje(conexion, prompt: str | None = None) -> str:
     if prompt:
         _enviar_mensaje(conexion, prompt)
     return conexion.recv(1024).decode().strip()
 
-def _autenticar_usuario(conexion):
-    while True:
-        usuario = _recibir_mensaje(conexion, "👤 Usuario: ")
-
-        # 📝 Manejar comando de registro
-        if usuario.upper().startswith("REGISTRAR"):
-            _manejar_registro(conexion, usuario)
-            continue
-
-        # 🔒 Autenticar usuario existente
-        password = _recibir_mensaje(conexion, "🔒 Contraseña: ")
-
-        datos_usuario = autenticar_usuario_en_servidor(usuario, password)
-        if not datos_usuario:
-            _enviar_mensaje(conexion, "❌ Credenciales inválidas. Intenta nuevamente.\n")
-            continue
-
-        usuario_id, permisos = datos_usuario
-        _enviar_mensaje(conexion, f"✅ Autenticación exitosa! Permisos: {permisos}\n")
-        return usuario_id, permisos
-
-def _manejar_registro(conexion, comando_registro):
+def _manejar_registro(conexion, comando_registro: str):
     partes = comando_registro.split()
     if len(partes) != 3:
         _enviar_mensaje(conexion, "❌ Formato incorrecto. Usa: REGISTRAR usuario contraseña\n")
@@ -124,56 +63,152 @@ def _manejar_registro(conexion, comando_registro):
     if respuesta.startswith("✅"):
         _enviar_mensaje(conexion, "👤 Ahora inicia sesión con tu nuevo usuario.\n")
 
-def _procesar_comandos(conexion, directorio, usuario_id):
+def _autenticar_usuario(conexion):
+    while True:
+        usuario = _recibir_mensaje(conexion, "👤 Usuario: ")
+
+        # Registro inline
+        if usuario.upper().startswith("REGISTRAR"):
+            _manejar_registro(conexion, usuario)
+            continue
+
+        password = _recibir_mensaje(conexion, "🔒 Contraseña: ")
+
+        datos_usuario = autenticar_usuario_en_servidor(usuario, password)
+        if not datos_usuario:
+            _enviar_mensaje(conexion, "❌ Credenciales inválidas. Intenta nuevamente.\n")
+            continue
+
+        usuario_id, permisos = datos_usuario
+        _enviar_mensaje(conexion, f"✅ Autenticación exitosa! Permisos: {permisos}\n")
+        return usuario_id, permisos
+
+def _procesar_comandos(conexion, directorio: str, usuario_id: int) -> bool:
+    """
+    Retorna True si el cliente envió SALIR explícitamente.
+    """
     while True:
         comando = _recibir_mensaje(conexion, "\n💻 Ingresar comando ('SALIR' para desconectar): ")
 
         if comando.upper() == "SALIR":
             _enviar_mensaje(conexion, "🔌 Desconectando...\n")
-            return True  # Indica que el cliente se desconectó explícitamente
+            return True
 
-        # Verificar si es un comando que requiere conexión
         partes = comando.strip().split()
         if partes and partes[0].upper() in ["DESCARGAR", "SUBIR"]:
+            # Estos comandos usan la conexión para transferir datos
             respuesta = manejar_comando(comando, directorio, usuario_id, conexion)
         else:
             respuesta = manejar_comando(comando, directorio, usuario_id)
 
         _enviar_mensaje(conexion, f"📄 {respuesta}\n")
-    
-    return False  # Por defecto, no se considera una desconexión explícita
 
+def manejar_cliente(conexion_ssl, direccion, directorio):
+    ip_cliente = direccion[0]
+    global _ips_desconectadas
+
+    cliente_desconectado = False
+    try:
+        _enviar_mensaje(conexion_ssl, "🌍 Bienvenido al servidor de archivos seguro.\n")
+        usuario_id, permisos = _autenticar_usuario(conexion_ssl)
+        cliente_desconectado = _procesar_comandos(conexion_ssl, directorio, usuario_id)
+
+    except Exception as error:
+        logging.error(f"❌ Error con cliente {ip_cliente}: {error}")
+    finally:
+        try:
+            conexion_ssl.close()
+        except Exception:
+            pass
+
+        # Evitar spam si la desconexión viene de la API/loopback
+        servidor_ip = socket.gethostbyname(socket.gethostname())
+        es_conexion_api = ip_cliente in ("127.0.0.1", "::1", servidor_ip)
+
+        if cliente_desconectado and not es_conexion_api:
+            logging.info(f"🔌 Cliente {ip_cliente} desconectado")
+            if ip_cliente not in _ips_desconectadas:
+                print(f"🔌 Cliente {ip_cliente} desconectado")
+                _ips_desconectadas.add(ip_cliente)
+
+def _escuchar_conexiones_socket(servidor_sock: socket.socket, contexto_ssl: ssl.SSLContext, directorio: str):
+    family_type = "IPv6" if servidor_sock.family == socket.AF_INET6 else "IPv4"
+    try:
+        addr = servidor_sock.getsockname()
+        if servidor_sock.family == socket.AF_INET6:
+            bind_str = f"[{addr[0]}]:{addr[1]}"
+        else:
+            bind_str = f"{addr[0]}:{addr[1]}"
+    except Exception:
+        bind_str = "<desconocido>"
+
+    print(f"👂 Esperando conexiones {family_type} en {bind_str} ...")
+    logging.info(f"accept() activo para {family_type} en {bind_str}")
+
+    while True:
+        try:
+            conexion, direccion = servidor_sock.accept()  # bloqueante
+            ip_cliente = direccion[0]
+            logging.info(f"✅ Nueva conexión desde {ip_cliente} ({family_type})")
+
+            try:
+                conexion_ssl = contexto_ssl.wrap_socket(conexion, server_side=True)
+            except ssl.SSLError as error:
+                logging.error(f"🔒 Error SSL con {ip_cliente}: {error}")
+                try:
+                    conexion.close()
+                except Exception:
+                    pass
+                continue
+
+            threading.Thread(
+                target=manejar_cliente,
+                args=(conexion_ssl, direccion, directorio),
+                daemon=True
+            ).start()
+
+        except Exception as e:
+            logging.error(f"❌ Error al aceptar conexión {family_type}: {e}")
 
 def iniciar_servidor(host=None, port=None, directorio=None):
-    # Usar valores predeterminados si no se proporcionan
-    host = host or os.getenv("SERVIDOR_HOST", "127.0.0.1")
-    port = port or int(os.getenv("SERVIDOR_PORT", 1608))
+    """
+    Inicia el servidor en Variante 2 (hardening):
+    - Dos sockets: IPv4 (0.0.0.0) e IPv6 (:: con IPV6_V6ONLY=1)
+    - Un hilo accept() por cada socket
+    """
+    # Defaults
+    host = host or os.getenv("SERVIDOR_HOST", "0.0.0.0")      # ignorado en hardening por utils.network
+    port = port or int(os.getenv("SERVIDOR_PORT", 5005))
     base_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
     directorio = directorio or os.getenv("SERVIDOR_DIR", os.path.join(os.path.dirname(base_dir), "archivos"))
-    # Asegurar que el directorio existe
+
+    # Asegurar directorio de archivos
     crear_directorio_si_no_existe(directorio)
 
+    # Contexto SSL
+    contexto = configurar_contexto_ssl(CERT_PATH, KEY_PATH)
+    if not contexto:
+        return
+
     try:
-        # Configurar sockets para IPv4 e IPv6
+        # ⚙️ Crear sockets (IPv4 + IPv6, V6ONLY=1) — Variante 2
         sockets_servidor = crear_socket_servidor(host, port)
 
-        # Verificar si se crearon sockets
         if not sockets_servidor:
             logging.error("❌ No se pudieron crear sockets para escuchar conexiones")
             return
 
-        # Mostrar información sobre los sockets creados
         print(f"🌍 Servidor de Archivos Seguro escuchando en {len(sockets_servidor)} interfaces:")
-        for i, sock in enumerate(sockets_servidor):
-            family = "IPv6" if sock.family == socket.AF_INET6 else "IPv4"
-            print(f"   ✅ Socket {i+1}: {family}")
+        for i, sock in enumerate(sockets_servidor, 1):
+            fam = "IPv6" if sock.family == socket.AF_INET6 else "IPv4"
+            try:
+                addr = sock.getsockname()
+                bind_str = f"[{addr[0]}]:{addr[1]}" if sock.family == socket.AF_INET6 else f"{addr[0]}:{addr[1]}"
+            except Exception:
+                bind_str = "<desconocido>"
+            print(f"   ✅ Socket {i}: {fam} en {bind_str}")
 
-        # Configurar SSL
-        contexto = configurar_contexto_ssl(CERT_PATH, KEY_PATH)
-        if not contexto:
-            return
-
-        # Crear hilos para cada socket
+        # 🧵 Lanzar un hilo accept() por socket
         hilos = []
         for sock in sockets_servidor:
             hilo = threading.Thread(
@@ -184,7 +219,7 @@ def iniciar_servidor(host=None, port=None, directorio=None):
             hilos.append(hilo)
             hilo.start()
 
-        # Esperar a que los hilos terminen (o usar algún mecanismo de señalización)
+        # Mantener proceso vivo hasta Ctrl+C
         try:
             for hilo in hilos:
                 hilo.join()
@@ -195,49 +230,15 @@ def iniciar_servidor(host=None, port=None, directorio=None):
     except Exception as error:
         logging.error(f"❌ Error en el servidor: {error}")
 
-def _escuchar_conexiones_socket(servidor, contexto, directorio):
-    family_type = "IPv6" if servidor.family == socket.AF_INET6 else "IPv4"
-    print(f"👂 Esperando conexiones {family_type} entrantes...")
-
-    try:
-        while True:
-            try:
-                # Aceptar conexión (bloqueante)
-                conexion, direccion = servidor.accept()
-                # Extraer solo la dirección IP
-                ip_cliente = direccion[0]
-                logging.info(f"✅ Nueva conexión desde {ip_cliente} ({family_type})")
-
-                try:
-                    # Envolver con SSL
-                    conexion_ssl = contexto.wrap_socket(conexion, server_side=True)
-
-                    # Iniciar hilo para manejar cliente
-                    threading.Thread(
-                        target=manejar_cliente,
-                        args=(conexion_ssl, direccion, directorio),
-                        daemon=True
-                    ).start()
-                except ssl.SSLError as error:
-                    logging.error(f"🔒 Error SSL con {ip_cliente}: {error}")
-                    conexion.close()
-            except Exception as e:
-                logging.error(f"❌ Error al aceptar conexión {family_type}: {e}")
-    finally:
-        servidor.close()
-
-# La función configurar_argumentos se ha movido a utils/config.py
-
 if __name__ == "__main__":
-    # 📋 Verificar que los módulos se importaron correctamente
     print("✅ Módulo servidor.py cargado correctamente.")
     print("✅ Importación de comandos, seguridad y baseDeDatos.db exitosa.")
 
-    # 🔧 Configurar argumentos
-    args = configurar_argumentos(modo_dual=False)
+    # Activamos el modo dual/hardening en el parser de argumentos
+    args = configurar_argumentos(modo_dual=True)
 
-    # 📝 Configurar nivel de logging si es verbose
-    if args.verbose:
+    # Verbose opcional
+    if getattr(args, "verbose", False):
         logging.getLogger().setLevel(logging.DEBUG)
 
     # 🚀 Iniciar servidor

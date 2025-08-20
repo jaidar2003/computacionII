@@ -4,19 +4,7 @@ import ssl
 import os
 
 def crear_socket_servidor(host, port, return_socket=True, stack_disponible=None):
-    """
-    Crea sockets para escuchar conexiones IPv4 e IPv6 según disponibilidad.
-    Implementa un enfoque de dual-stack real con sockets separados para cada protocolo.
-    
-    Args:
-        host: Dirección IP o nombre de host para escuchar
-        port: Puerto para escuchar
-        return_socket: Si es True, retorna los sockets creados; si es False, solo verifica si se pueden crear
-        stack_disponible: Diccionario con información de disponibilidad de stacks {'ipv4': bool, 'ipv6': bool}
-        
-    Returns:
-        Lista de sockets creados o True si return_socket es False
-    """
+
     # Lista para almacenar los sockets creados exitosamente
     sockets_creados = []
     
