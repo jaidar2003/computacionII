@@ -72,7 +72,8 @@ chmod +x /Users/juanmaaidar/PycharmProjects/computacionII/cli/menu_cli.py
 Paso 4: Uso del CLI con menú numerado (más intuitivo)
 ---------------------------------------------------
 # Desde el directorio raíz del proyecto, inicia el CLI con menú numerado:
-./cli/menu_cli.py
+./cli/menu_cli.
+py
 
 # Este modo presenta un menú principal con opciones numeradas:
 # 1. Iniciar sesión

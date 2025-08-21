@@ -18,6 +18,16 @@ def main():
     parser.add_argument('--shell', action='store_true', 
                         help='Alias para --interactive')
     
+    # Opciones globales para configuración del servidor
+    parser.add_argument('--host', 
+                        help='Dirección IP o hostname del servidor (sobrescribe la configuración)')
+    parser.add_argument('--port', type=int,
+                        help='Puerto del servidor (sobrescribe la configuración)')
+    parser.add_argument('--ipv4', action='store_true',
+                        help='Forzar uso de IPv4 para conexiones')
+    parser.add_argument('--ipv6', action='store_true',
+                        help='Forzar uso de IPv6 para conexiones')
+    
     subparsers = parser.add_subparsers(dest='command', help='Comandos disponibles')
     
     # Comando interactivo explícito
@@ -70,14 +80,35 @@ def main():
     status_parser = subparsers.add_parser('status', help='Mostrar estado de la sesión')
     
     # Comandos de configuración
-    config_server_parser = subparsers.add_parser('config-server', help='Configurar dirección IP del servidor')
-    config_server_parser.add_argument('ip', nargs='?', help='Nueva dirección IP del servidor (opcional)')
+    config_server_parser = subparsers.add_parser('config-server', help='Configurar dirección IP y puerto del servidor')
+    config_server_parser.add_argument('ip', nargs='?', help='Nueva dirección IP o hostname del servidor (opcional)')
+    config_server_parser.add_argument('--port', '-p', help='Nuevo puerto del servidor')
     
     # Alias comunes
     subparsers.add_parser('ls', help='Alias para list').set_defaults(command='list')
     subparsers.add_parser('rm', help='Alias para delete').add_argument('filename')
     
     args = parser.parse_args()
+    
+    # Aplicar opciones de configuración del servidor si se proporcionaron
+    if args.host:
+        os.environ['SERVER_HOST'] = args.host
+        print(f"Usando servidor: {args.host} (desde línea de comandos)")
+    
+    if args.port:
+        os.environ['SERVER_PORT'] = str(args.port)
+        print(f"Usando puerto: {args.port} (desde línea de comandos)")
+    
+    # Configurar preferencia de IP si se especificó
+    if args.ipv4 and args.ipv6:
+        print("ADVERTENCIA: Se especificaron --ipv4 y --ipv6 simultáneamente. Se usará IPv6.")
+        os.environ['IP_PREFERENCE'] = 'ipv6'
+    elif args.ipv4:
+        os.environ['IP_PREFERENCE'] = 'ipv4'
+        print("Forzando conexiones IPv4")
+    elif args.ipv6:
+        os.environ['IP_PREFERENCE'] = 'ipv6'
+        print("Forzando conexiones IPv6")
     
     # Verificar si se debe iniciar en modo interactivo
     if args.interactive or args.shell or args.command == 'shell':
@@ -137,8 +168,8 @@ def main():
             print_error("No hay sesión activa")
             print_info("Usa el comando 'login' para iniciar sesión")
     elif args.command == 'config-server':
-        # Configurar dirección IP del servidor
-        config.update_server_ip(getattr(args, 'ip', None))
+        # Configurar dirección IP y puerto del servidor
+        config.update_server_ip(getattr(args, 'ip', None), getattr(args, 'port', None))
     else:
         parser.print_help()
         sys.exit(1)

@@ -50,7 +50,7 @@ def actualizar_ip_en_env(nueva_ip):
 
 def iniciar_servidor_ssl(host=None, port=None, directorio=None):
     # Usar valores predeterminados si no se proporcionan
-    host = host or os.getenv("SERVIDOR_HOST", "192.168.100.191")
+    host = host or os.getenv("SERVIDOR_HOST", "0.0.0.0")
     port = port or int(os.getenv("SERVIDOR_PORT", 5005))
     directorio = directorio or os.getenv("SERVIDOR_DIR", os.path.join(os.path.dirname(BASE_DIR), "archivos"))
     # 📂 Asegurar que el directorio de archivos exista
