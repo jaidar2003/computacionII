@@ -41,8 +41,8 @@ def actualizar_ip_en_env(nueva_ip):
         contenido = file.read()
     
     # Reemplazar la IP actual con la nueva IP
-    patron = r'SERVIDOR_HOST=.*'
-    nuevo_contenido = re.sub(patron, f'SERVIDOR_HOST={nueva_ip}', contenido)
+    patron = r'SERVER_HOST=.*'
+    nuevo_contenido = re.sub(patron, f'SERVER_HOST={nueva_ip}', contenido)
     
     # Escribir el nuevo contenido al archivo .env
     with open(env_path, 'w') as file:
@@ -50,8 +50,8 @@ def actualizar_ip_en_env(nueva_ip):
 
 def iniciar_servidor_ssl(host=None, port=None, directorio=None):
     # Usar valores predeterminados si no se proporcionan
-    host = host or os.getenv("SERVIDOR_HOST", "0.0.0.0")
-    port = port or int(os.getenv("SERVIDOR_PORT", 5005))
+    host = host or os.getenv("SERVER_HOST", "0.0.0.0")
+    port = port or int(os.getenv("SERVER_PORT", 5005))
     directorio = directorio or os.getenv("SERVIDOR_DIR", os.path.join(os.path.dirname(BASE_DIR), "archivos"))
     # 📂 Asegurar que el directorio de archivos exista
     crear_directorio_si_no_existe(directorio)
@@ -122,7 +122,7 @@ def iniciar_servidor_ssl(host=None, port=None, directorio=None):
             print(f"ℹ️ La dirección IP local detectada es: {ip_local}")
             
             # Actualizar automáticamente la IP en el archivo .env
-            print(f"🔄 Actualizando automáticamente SERVIDOR_HOST={ip_local} en el archivo .env")
+            print(f"🔄 Actualizando automáticamente SERVER_HOST={ip_local} en el archivo .env")
             actualizar_ip_en_env(ip_local)
             print(f"✅ Archivo .env actualizado correctamente. Reinicia el servidor para aplicar los cambios.")
             print(f"ℹ️ Para usar esta IP manualmente, ejecuta el servidor con: -H {ip_local}")
@@ -312,16 +312,16 @@ def _iniciar_modo_servidor(args):
     print(f"🌍 Iniciando Servidor de Archivos Seguro en {args.host}:{args.port}...")
     
     # Verificar si la IP proporcionada es diferente de la configurada en .env
-    ip_env = os.getenv("SERVIDOR_HOST", "127.0.0.1")
+    ip_env = os.getenv("SERVER_HOST", "127.0.0.1")
     if args.host != ip_env:
         print(f"   ℹ️  La dirección IP proporcionada ({args.host}) es diferente de la configurada en .env ({ip_env})")
-        print(f"   🔄 Actualizando automáticamente SERVIDOR_HOST={args.host} en el archivo .env")
+        print(f"   🔄 Actualizando automáticamente SERVER_HOST={args.host} en el archivo .env")
         actualizar_ip_en_env(args.host)
         print(f"   ✅ Archivo .env actualizado correctamente.")
     
     if args.host != "127.0.0.1" and args.host != "localhost" and args.host != "0.0.0.0":
         print(f"   ℹ️  Si tienes problemas de conexión, verifica que la dirección IP sea accesible desde tus clientes.")
-        print(f"   ℹ️  Para usar la dirección local estándar, ejecuta con: -H 127.0.0.1 o modifica SERVIDOR_HOST en .env")
+        print(f"   ℹ️  Para usar la dirección local estándar, ejecuta con: -H 127.0.0.1 o modifica SERVER_HOST en .env")
         print(f"   ℹ️  El sistema intentará detectar automáticamente tu IP local si la configurada no es válida.")
     worker_process = iniciar_worker_celery()
 
@@ -337,8 +337,8 @@ def _iniciar_modo_api(args):
     print(f"   ℹ️  Asegúrate de que el servidor de archivos esté en ejecución en {args.host}:{args.port}")
 
     # Actualizar las variables de entorno para la conexión al servidor
-    os.environ["SERVIDOR_HOST"] = args.host
-    os.environ["SERVIDOR_PORT"] = str(args.port)
+    os.environ["SERVER_HOST"] = args.host
+    os.environ["SERVER_PORT"] = str(args.port)
 
     flask_thread = iniciar_servidor_flask()
 
@@ -349,6 +349,68 @@ def _iniciar_modo_api(args):
             time.sleep(1)
     except KeyboardInterrupt:
         print("\n🛑 Apagando API Flask...")
+
+def _iniciar_modo_cli(args):
+    print(f"🖥️ Iniciando CLI del Servidor de Archivos...")
+    
+    # Restaurar los argumentos originales y procesarlos para el CLI
+    import sys
+    import os
+    
+    # Obtener los argumentos originales completos
+    original_args = sys.argv.copy()
+    
+    # Encontrar el índice donde aparece 'cli'
+    cli_index = -1
+    for i, arg in enumerate(original_args):
+        if arg == 'cli' or (i > 0 and original_args[i-1] in ['-m', '--modo'] and arg == 'cli'):
+            cli_index = i
+            break
+    
+    # Construir nuevos argumentos para el CLI
+    if cli_index >= 0 and cli_index + 1 < len(original_args):
+        # Tomar todos los argumentos después de 'cli'
+        cli_args = original_args[cli_index + 1:]
+    else:
+        cli_args = []
+    
+    # Configurar variables de entorno para el servidor si se especificaron
+    if args.host:
+        os.environ["SERVER_HOST"] = args.host
+    if args.port:
+        os.environ["SERVER_PORT"] = str(args.port)
+    
+    # Verificar si se solicitó el modo simple o menu
+    use_simple_mode = False
+    use_menu_mode = False
+    
+    for arg in cli_args[:]:  # Usar copia para poder modificar durante iteración
+        if arg == '--simple':
+            use_simple_mode = True
+            cli_args.remove('--simple')
+            break
+        elif arg == '--menu':
+            use_menu_mode = True
+            cli_args.remove('--menu')
+            break
+    
+    # Si no se especifica ningún argumento, usar modo menu por defecto
+    if not cli_args and not use_simple_mode:
+        use_menu_mode = True
+    
+    # Reconstruir sys.argv para el CLI
+    sys.argv = [original_args[0]] + cli_args
+    
+    # Ejecutar el CLI en el modo correspondiente
+    if use_simple_mode:
+        from cli.simple.simple_menu import main as simple_main
+        simple_main()
+    elif use_menu_mode:
+        from cli.menu_cli import main as menu_main
+        menu_main()
+    else:
+        from cli.cli import main as cli_main
+        cli_main()
 
 
 if __name__ == "__main__":
@@ -364,3 +426,5 @@ if __name__ == "__main__":
         _iniciar_modo_servidor(args)
     elif args.modo == 'api':
         _iniciar_modo_api(args)
+    elif args.modo == 'cli':
+        _iniciar_modo_cli(args)

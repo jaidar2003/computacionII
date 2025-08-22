@@ -177,8 +177,8 @@ def iniciar_servidor(host=None, port=None, directorio=None):
     - Un hilo accept() por cada socket
     """
     # Defaults
-    host = host or os.getenv("SERVIDOR_HOST", "0.0.0.0")      # ignorado en hardening por utils.network
-    port = port or int(os.getenv("SERVIDOR_PORT", 5005))
+    host = host or os.getenv("SERVER_HOST", "0.0.0.0")      # ignorado en hardening por utils.network
+    port = port or int(os.getenv("SERVER_PORT", 5005))
     base_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
     directorio = directorio or os.getenv("SERVIDOR_DIR", os.path.join(os.path.dirname(base_dir), "archivos"))
 

@@ -40,8 +40,8 @@ CORS(app, supports_credentials=True, origins=["*"], allow_headers=["Content-Type
      expose_headers=["Content-Disposition"], methods=["GET", "POST", "PUT", "DELETE", "OPTIONS"])
 
 # Configuración de conexión al servidor
-SERVIDOR_HOST = os.getenv("SERVIDOR_HOST", "127.0.0.1")
-SERVIDOR_PORT = int(os.getenv("SERVIDOR_PORT", 1608))
+SERVER_HOST = os.getenv("SERVER_HOST", "127.0.0.1")
+SERVER_PORT = int(os.getenv("SERVER_PORT", 1608))
 UPLOAD_FOLDER = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "temp_uploads")
 
 # Crear directorio de uploads si no existe
@@ -51,8 +51,8 @@ if not os.path.exists(UPLOAD_FOLDER):
 # Función para establecer conexión con el servidor de sockets
 def conectar_servidor():
     try:
-        print(f"Intentando conectar al servidor en {SERVIDOR_HOST}:{SERVIDOR_PORT}...")
-        conexion_ssl = establecer_conexion_ssl(SERVIDOR_HOST, SERVIDOR_PORT, verificar_cert=True)
+        print(f"Intentando conectar al servidor en {SERVER_HOST}:{SERVER_PORT}...")
+        conexion_ssl = establecer_conexion_ssl(SERVER_HOST, SERVER_PORT, verificar_cert=True)
         if not conexion_ssl:
             error_msg = "No se pudo establecer conexión con el servidor"
             print(error_msg)

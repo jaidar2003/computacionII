@@ -45,8 +45,8 @@ cd /home/juanma/PycharmProjects/computacionII/final/servidorArchivos/front
 # Editar el archivo .env para configurar VITE_API_URL si la API está en otra máquina
 npm run dev
 
-USANDO EL CLI INTUITIVO
-====================
+USANDO EL CLI INTEGRADO - ¡NUEVA FUNCIONALIDAD! 🎉
+================================================
 
 ⚠️ IMPORTANTE: Antes de usar el CLI, asegúrate de que el servidor esté en ejecución.
 A diferencia del frontend, el CLI se comunica directamente con el servidor mediante sockets SSL,
@@ -54,103 +54,127 @@ sin utilizar la API Flask como intermediario.
 
 Paso 1: Instalar dependencias
 ----------------------------
-# Instala las dependencias necesarias para el CLI intuitivo
+# Instala las dependencias necesarias para el CLI
 pip install colorama tqdm
 
-Paso 2: Configuración del CLI
+Paso 2: **NUEVA FORMA RECOMENDADA** - Usando main.py directamente
+----------------------------------------------------------------
+# Desde la carpeta servidorArchivos (MÉTODO PRINCIPAL)
+cd /Users/juanmaaidar/PycharmProjects/computacionII/final/servidorArchivos
+python main.py -m cli
+
+# ¡Esto ahora lanza automáticamente el menú numerado!
+
+Paso 3: Opciones adicionales del CLI integrado
+---------------------------------------------
+# Forzar el modo menú explícitamente
+python main.py -m cli --menu
+
+# Usar el modo simple (solo login/registro/salir)
+python main.py -m cli --simple
+
+# Usar comandos tradicionales directamente
+python main.py -m cli status
+python main.py -m cli login usuario contraseña
+python main.py -m cli list
+python main.py -m cli upload /ruta/archivo.txt
+
+Paso 4: Métodos alternativos (siguen funcionando)
+------------------------------------------------
+# Desde la raíz del proyecto usando wrappers
+cd /Users/juanmaaidar/PycharmProjects/computacionII
+python menu_cli_wrapper.py
+# o
+python run_cli.py
+# o
+python simple_cli.py
+
+Paso 5: Configuración del CLI
 -----------------------------
-# Asegúrate de que la configuración del servidor en el archivo de configuración sea correcta
-# Por defecto es SERVER_HOST = "127.0.0.1" y SERVER_PORT = 1608
-# Si el servidor se ejecuta en otra dirección o puerto, edita el archivo:
-nano /Users/juanmaaidar/PycharmProjects/computacionII/cli/utils/config.py
+# El CLI ahora detecta automáticamente las variables SERVER_HOST/SERVER_PORT del archivo .env
+# Si necesitas cambiar la configuración, edita el archivo:
+nano /Users/juanmaaidar/PycharmProjects/computacionII/final/servidorArchivos/.env
 
-Paso 3: Hacer ejecutables los CLIs (solo la primera vez)
-----------------------------------------------------
-chmod +x /Users/juanmaaidar/PycharmProjects/computacionII/cli/cli.py
-chmod +x /Users/juanmaaidar/PycharmProjects/computacionII/cli/menu_cli.py
+# O especifica el host y puerto directamente:
+python main.py -m cli -H 192.168.100.191 -p 1608
 
-Paso 4: Uso del CLI con menú numerado (más intuitivo)
----------------------------------------------------
-# Desde el directorio raíz del proyecto, inicia el CLI con menú numerado:
-./cli/menu_cli.
-py
+MENÚS DISPONIBLES EN EL CLI
+==========================
 
-# Este modo presenta un menú principal con opciones numeradas:
-# 1. Iniciar sesión
-# 2. Registrarse
-# 3. Salir
+Menú principal (sin sesión iniciada):
+------------------------------------
+1. Iniciar sesión
+2. Registrarse
+3. Salir
 
-# Una vez iniciada la sesión, aparecen más opciones:
-# 4. Listar archivos
-# 5. Subir archivo
-# 6. Descargar archivo
-# 7. Eliminar archivo
-# 8. Renombrar archivo
-# 9. Verificar archivo
-# 10. Cerrar sesión
+Menú principal (con sesión iniciada):
+-----------------------------------
+4. Listar archivos
+5. Subir archivo
+6. Descargar archivo
+7. Eliminar archivo
+8. Renombrar archivo
+9. Verificar archivo
+10. Cerrar sesión
 
-# Los usuarios administradores tienen opciones adicionales:
-# 11. Listar usuarios
-# 12. Ver solicitudes de permisos
-# 13. Aprobar/rechazar solicitud
+Opciones adicionales para administradores:
+-----------------------------------------
+11. Listar usuarios
+12. Ver solicitudes de permisos
+13. Aprobar/rechazar solicitud
 
-# Mientras que los usuarios normales ven:
-# 11. Solicitar permisos de administrador
-# 12. Ver mis solicitudes de permisos
+Opciones adicionales para usuarios normales:
+-------------------------------------------
+11. Solicitar permisos de administrador
+12. Ver mis solicitudes de permisos
 
-Paso 5: Uso del CLI en modo interactivo (para usuarios avanzados)
----------------------------------------------------
-# Desde el directorio raíz del proyecto, inicia el modo interactivo:
-./cli/cli.py --interactive
+CAMBIOS IMPORTANTES EN ESTA ACTUALIZACIÓN
+========================================
 
-# O usa el alias más corto:
-./cli/cli.py -i
+✅ **CLI Integrado**: Ahora se ejecuta directamente desde main.py con `-m cli`
+✅ **Menú por defecto**: `python main.py -m cli` lanza automáticamente el menú numerado
+✅ **Configuración automática**: Detecta automáticamente SERVER_HOST/SERVER_PORT del .env
+✅ **Sin advertencias**: Ya no verás advertencias sobre variables faltantes
+✅ **Múltiples modos**: Soporte para modo menú, simple y comandos tradicionales
+✅ **Ubicación actualizada**: CLI movido a servidorArchivos/cli/ para mejor organización
 
-# O usa el comando shell:
-./cli/cli.py shell
-
-# Una vez en el modo interactivo, puedes usar comandos como:
-# - help                         # Ver ayuda
-# - login usuario contraseña     # Iniciar sesión
-# - list                         # Listar archivos
-# - upload /ruta/archivo.txt     # Subir archivo (con autocompletado)
-# - download archivo.txt         # Descargar archivo (con autocompletado)
-# - status                       # Ver estado de la sesión
-# - exit                         # Salir
-
-# El modo interactivo ofrece:
-# - Historial de comandos (flechas arriba/abajo)
-# - Autocompletado (tecla Tab)
-# - Prompt personalizado con usuario y rol
-# - Colores y formato mejorado
-# - Barras de progreso para subidas y descargas
-
-Paso 5: Uso del CLI en modo tradicional
---------------------------------------
-# También puedes usar el CLI en modo tradicional:
+COMANDOS TRADICIONALES DEL CLI (modo avanzado)
+=============================================
 
 # Autenticación
-./cli/cli.py login nombre_usuario contraseña
-./cli/cli.py register nuevo_usuario contraseña
-./cli/cli.py logout
+python main.py -m cli login nombre_usuario contraseña
+python main.py -m cli register nuevo_usuario contraseña
+python main.py -m cli logout
 
 # Gestión de archivos
-./cli/cli.py list                                # o ls
-./cli/cli.py upload /ruta/al/archivo.txt
-./cli/cli.py download nombre_archivo.txt
-./cli/cli.py delete nombre_archivo.txt           # o rm
-./cli/cli.py rename nombre_viejo.txt nombre_nuevo.txt
-./cli/cli.py verify nombre_archivo.txt           # o verify (sin argumentos para todos)
+python main.py -m cli list                                # o ls
+python main.py -m cli upload /ruta/al/archivo.txt
+python main.py -m cli download nombre_archivo.txt
+python main.py -m cli delete nombre_archivo.txt           # o rm
+python main.py -m cli rename nombre_viejo.txt nombre_nuevo.txt
+python main.py -m cli verify nombre_archivo.txt           # o verify (sin argumentos para todos)
 
 # Gestión de permisos
-./cli/cli.py request-permission admin            # o request
-./cli/cli.py view-requests                       # o requests
-./cli/cli.py approve ID_SOLICITUD aprobar
-./cli/cli.py list-users                          # o users
+python main.py -m cli request-permission admin            # o request
+python main.py -m cli view-requests                       # o requests
+python main.py -m cli approve ID_SOLICITUD aprobar
+python main.py -m cli list-users                          # o users
 
 # Utilidades
-./cli/cli.py status                              # Estado de la sesión
-./cli/cli.py --help                              # Ver ayuda
+python main.py -m cli status                              # Estado de la sesión
+python main.py -m cli --help                              # Ver ayuda
+
+RECOMENDACIÓN DE USO
+===================
+
+Para la experiencia más simple y directa:
+
+```bash
+cd /Users/juanmaaidar/PycharmProjects/computacionII/final/servidorArchivos
+python main.py -m cli
+```
+
+¡Eso es todo! El menú numerado aparecerá automáticamente y podrás navegar de forma intuitiva.
 
 # Para más información, consulta la documentación completa en:
-# /Users/juanmaaidar/PycharmProjects/computacionII/cli/README.md
+# /Users/juanmaaidar/PycharmProjects/computacionII/final/servidorArchivos/INSTRUCCIONES_MENU_CLI_ACTUALIZADO.md

@@ -23,8 +23,8 @@ def verificar_configuracion_env():
     env_existe = os.path.exists(env_path)
 
     # Verificar si las variables necesarias están definidas
-    servidor_host = os.getenv("SERVIDOR_HOST")
-    servidor_port = os.getenv("SERVIDOR_PORT")
+    servidor_host = os.getenv("SERVER_HOST")
+    servidor_port = os.getenv("SERVER_PORT")
     db_path = os.getenv("DB_PATH")
 
     # Si el archivo no existe o falta alguna variable importante
@@ -36,13 +36,13 @@ def verificar_configuracion_env():
         print("\nPara personalizar la configuración, crea o edita el archivo .env con:")
         print(f"  - Ruta del archivo: {env_path}")
         print("\nEjemplo de contenido para el archivo .env:")
-        print("  SERVIDOR_HOST=127.0.0.1       # Dirección IP del servidor")
-        print("  SERVIDOR_PORT=1608            # Puerto del servidor")
+        print("  SERVER_HOST=127.0.0.1       # Dirección IP del servidor")
+        print("  SERVER_PORT=1608            # Puerto del servidor")
         print("  DB_PATH=/ruta/completa/a/baseDeDatos/servidor_archivos.db")
         print("  CELERY_PATH=/ruta/a/celery    # Opcional: ruta al ejecutable de Celery")
         print("\nLos valores actuales son:")
-        print(f"  SERVIDOR_HOST={os.getenv('SERVIDOR_HOST', '127.0.0.1')} (predeterminado: 127.0.0.1)")
-        print(f"  SERVIDOR_PORT={os.getenv('SERVIDOR_PORT', '1608')} (predeterminado: 1608)")
+        print(f"  SERVER_HOST={os.getenv('SERVER_HOST', '127.0.0.1')} (predeterminado: 127.0.0.1)")
+        print(f"  SERVER_PORT={os.getenv('SERVER_PORT', '1608')} (predeterminado: 1608)")
         print(f"  DB_PATH={os.getenv('DB_PATH', 'baseDeDatos/servidor_archivos.db')} (predeterminado: baseDeDatos/servidor_archivos.db)")
         print("="*80 + "\n")
         return False
@@ -51,7 +51,32 @@ def verificar_configuracion_env():
 
 def configurar_argumentos(modo_dual=False):
     if modo_dual:
-        # Configuración para main.py (servidor/api)
+        import sys
+        
+        # Verificar si estamos en modo CLI
+        cli_mode = False
+        for i, arg in enumerate(sys.argv[1:], 1):
+            if arg in ['-m', '--modo'] and i < len(sys.argv) - 1 and sys.argv[i+1] == 'cli':
+                cli_mode = True
+                break
+            if arg == '--modo=cli':
+                cli_mode = True
+                break
+        
+        # Si estamos en modo CLI, solo procesar los argumentos hasta -m cli
+        if cli_mode:
+            # Encontrar el índice donde aparece 'cli'
+            cli_index = -1
+            for i, arg in enumerate(sys.argv):
+                if arg == 'cli':
+                    cli_index = i
+                    break
+            
+            # Si encontramos 'cli', solo procesar hasta ese punto
+            if cli_index > 0:
+                sys.argv = sys.argv[:cli_index+1]
+        
+        # Configuración para main.py (servidor/api/cli)
         parser = argparse.ArgumentParser(
             description='🔐 Servidor de Archivos Seguro',
             formatter_class=argparse.ArgumentDefaultsHelpFormatter
@@ -60,9 +85,9 @@ def configurar_argumentos(modo_dual=False):
         parser.add_argument(
             '-m', '--modo', 
             type=str, 
-            choices=['server', 'api'], 
+            choices=['server', 'api', 'cli'], 
             default='server',
-            help='Modo de ejecución: server o api'
+            help='Modo de ejecución: server, api o cli'
         )
     else:
         # Configuración para servidor.py (solo servidor)
@@ -75,14 +100,14 @@ def configurar_argumentos(modo_dual=False):
     parser.add_argument(
         '-H', '--host', 
         type=str, 
-        default=os.getenv("SERVIDOR_HOST", "127.0.0.1"),
+        default=os.getenv("SERVER_HOST", "127.0.0.1"),
         help='Dirección IP del servidor'
     )
 
     parser.add_argument(
         '-p', '--port', 
         type=int, 
-        default=int(os.getenv("SERVIDOR_PORT", 1608)),
+        default=int(os.getenv("SERVER_PORT", 1608)),
         help='Puerto del servidor'
     )
 
