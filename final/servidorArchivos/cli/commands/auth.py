@@ -49,7 +49,8 @@ def login(username, password):
             
             save_session({
                 "user": username,
-                "role": permisos
+                "role": permisos,
+                "password": password
             })
             
             print_success(f"Sesión iniciada como {BOLD}{username}{RESET} ({permisos})")

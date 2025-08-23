@@ -39,25 +39,25 @@ def format_highlight(message):
     """Format a highlighted message"""
     return f"{HIGHLIGHT}{message}{RESET}"
 
-def print_success(message):
+def print_success(message, **kwargs):
     """Print a success message"""
-    print(format_success(message))
+    print(format_success(message), **kwargs)
 
-def print_error(message):
+def print_error(message, **kwargs):
     """Print an error message"""
-    print(format_error(message))
+    print(format_error(message), **kwargs)
 
-def print_warning(message):
+def print_warning(message, **kwargs):
     """Print a warning message"""
-    print(format_warning(message))
+    print(format_warning(message), **kwargs)
 
-def print_info(message):
+def print_info(message, **kwargs):
     """Print an info message"""
-    print(format_info(message))
+    print(format_info(message), **kwargs)
 
-def print_header(message):
+def print_header(message, **kwargs):
     """Print a header message"""
-    print(format_header(message))
+    print(format_header(message), **kwargs)
 
 def print_table_header(columns, widths):
     """Print a table header with the given columns and widths"""

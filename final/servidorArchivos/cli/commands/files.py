@@ -32,8 +32,8 @@ def _authenticate_with_session(connection):
     # Recibir prompt de contraseña (silenciosamente)
     pass_prompt = receive_prompt(connection)
     
-    # Enviar contraseña (token de sesión)
-    send_response(connection, "SESSION_TOKEN")
+    # Enviar contraseña (usar contraseña real de la sesión)
+    send_response(connection, session.get("password", ""))
     
     # Recibir resultado de autenticación
     auth_result = receive_prompt(connection)
