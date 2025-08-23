@@ -76,8 +76,14 @@ def list_files(silent=False):
         if not silent:
             print_info("Obteniendo lista de archivos...")
         
+        # Recibir el prompt de comando
+        command_prompt = receive_prompt(connection)
+        
         # Enviar comando LISTAR
-        response = send_command(connection, "LISTAR")
+        send_response(connection, "LISTAR")
+        
+        # Recibir respuesta del comando
+        response = receive_prompt(connection)
         
         # Cerrar conexión
         connection.close()
@@ -222,62 +228,79 @@ def download_file(filename):
         # Autenticar con la sesión guardada
         _authenticate_with_session(connection)
         
-        # Implementar nuestra propia función de descarga con barra de progreso
-        try:
-            # Enviar comando DESCARGAR con el nombre del archivo
-            command = f"DESCARGAR {filename}"
-            connection.sendall(command.encode('utf-8'))
+        # Ahora el servidor está esperando comandos en el bucle _procesar_comandos
+        # Recibir el prompt de comando
+        command_prompt = receive_prompt(connection)
+        
+        # Enviar comando DESCARGAR
+        command = f"DESCARGAR {filename}"
+        send_response(connection, command)
+        
+        # Recibir mensaje de confirmación del servidor
+        server_response = connection.recv(4096).decode('utf-8').strip()
+        
+        # Si el servidor reporta un error, mostrarlo y salir
+        if server_response.startswith("❌") or server_response.startswith("⚠️"):
+            print_error(f"Error del servidor: {server_response}")
+            connection.close()
+            return
+        
+        # Si el servidor está listo para enviar, extraer el tamaño del archivo
+        if "✅ Listo para enviar" in server_response:
+            # Extraer tamaño del archivo del mensaje
+            # Formato: "✅ Listo para enviar 'archivo.txt' (12345 bytes)"
+            try:
+                size_start = server_response.find("(") + 1
+                size_end = server_response.find(" bytes)")
+                file_size = int(server_response[size_start:size_end])
+            except (ValueError, IndexError):
+                file_size = None
             
-            # Recibir los primeros bytes para verificar si hay error
-            initial_chunk = connection.recv(4096)
+            # Enviar confirmación al servidor
+            connection.sendall("LISTO".encode('utf-8'))
             
-            # Si el primer chunk contiene un mensaje de error, mostrarlo y salir
-            if initial_chunk.startswith(b'\xe2\x9d\x8c'):  # Emoji ❌
-                error_message = initial_chunk.decode('utf-8').strip()
-                print_error(f"Error al descargar archivo: {error_message}")
-                connection.close()
-                return
+            # Recibir el archivo con barra de progreso
+            file_data = b''
+            bytes_received = 0
             
-            # Si no es un error, comenzar a guardar el archivo
-            file_data = initial_chunk
-            
-            # Intentar determinar el tamaño del archivo para la barra de progreso
-            # (esto es aproximado ya que no tenemos el tamaño exacto)
-            content_length = len(initial_chunk)
-            estimated_size = content_length * 10  # Estimación inicial
-            
-            # Crear barra de progreso
-            with tqdm(total=estimated_size, unit='B', unit_scale=True, desc=f"Descargando {filename}") as pbar:
-                # Actualizar con los bytes ya recibidos
-                pbar.update(content_length)
-                
-                # Seguir recibiendo datos
-                while True:
-                    try:
-                        connection.settimeout(0.5)  # Esperar 0.5 segundos por más datos
-                        chunk = connection.recv(4096)
-                        if not chunk:
-                            break
-                        
-                        file_data += chunk
-                        pbar.update(len(chunk))
-                        
-                        # Ajustar el tamaño estimado si es necesario
-                        if pbar.n >= pbar.total * 0.8:
-                            pbar.total = pbar.total * 1.5
-                    except socket.timeout:
+            # Crear barra de progreso con el tamaño real
+            with tqdm(total=file_size, unit='B', unit_scale=True, desc=f"Descargando {filename}", 
+                     bar_format='{l_bar}{bar}| {n_fmt}/{total_fmt} [{elapsed}<{remaining}, {rate_fmt}]') as pbar:
+                while bytes_received < file_size:
+                    # Usar chunks más pequeños para actualizaciones más fluidas
+                    chunk_size = min(4096, file_size - bytes_received)
+                    chunk = connection.recv(chunk_size)
+                    if not chunk:
                         break
+                    
+                    file_data += chunk
+                    bytes_received += len(chunk)
+                    pbar.update(len(chunk))
+                    
+                    # Pequeño delay para hacer la actualización más visible en archivos pequeños
+                    if file_size < 1024 * 1024:  # Solo para archivos menores a 1MB
+                        import time
+                        time.sleep(0.001)  # 1ms delay
             
-            connection.settimeout(None)  # Restaurar timeout
+            # Determinar la ruta de descarga
+            download_path = filename  # Por defecto, directorio actual
+            if config.CLIENTE_DIR:
+                # Crear directorio de descargas si no existe
+                os.makedirs(config.CLIENTE_DIR, exist_ok=True)
+                download_path = os.path.join(config.CLIENTE_DIR, filename)
             
             # Guardar archivo
-            with open(filename, 'wb') as f:
+            with open(download_path, 'wb') as f:
                 f.write(file_data)
             
+            # Enviar confirmación final al servidor
+            connection.sendall("✅ Archivo recibido correctamente".encode('utf-8'))
+            
             print_success(f"Archivo {BOLD}{filename}{RESET} descargado correctamente ({format_size(len(file_data))})")
-        
-        except Exception as e:
-            print_error(f"Error al descargar archivo: {str(e)}")
+            if config.CLIENTE_DIR:
+                print_info(f"Guardado en: {BOLD}{download_path}{RESET}")
+        else:
+            print_error(f"Respuesta inesperada del servidor: {server_response}")
         
         # Cerrar conexión
         connection.close()

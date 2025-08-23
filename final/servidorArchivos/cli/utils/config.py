@@ -22,6 +22,9 @@ ENV_PATH = os.path.join(os.path.dirname(os.path.dirname(os.path.dirname(os.path.
 SERVER_HOST = os.getenv("SERVER_HOST")
 SERVER_PORT = os.getenv("SERVER_PORT")
 
+# Directorio de descargas del cliente
+CLIENTE_DIR = os.getenv("CLIENTE_DIR")
+
 # Verificar si existe configuración
 def verificar_configuracion():
     """Verifica si existe configuración del servidor y la crea si no existe"""
@@ -53,10 +56,11 @@ def verificar_configuracion():
 
 def recargar_configuracion():
     """Recarga las variables de configuración desde las variables de entorno"""
-    global SERVER_HOST, SERVER_PORT
+    global SERVER_HOST, SERVER_PORT, CLIENTE_DIR
     
     # Recargar variables desde el entorno
     SERVER_HOST = os.getenv("SERVER_HOST", SERVER_HOST)
+    CLIENTE_DIR = os.getenv("CLIENTE_DIR", CLIENTE_DIR)
     
     # Obtener el puerto y convertirlo a entero
     port_str = os.getenv("SERVER_PORT")
