@@ -1,5 +1,3 @@
-# servidor.py — Variante 2 (hardening): IPv4 + IPv6 con hilos accept() separados
-
 import socket
 import ssl
 import threading
@@ -171,11 +169,6 @@ def _escuchar_conexiones_socket(servidor_sock: socket.socket, contexto_ssl: ssl.
             logging.error(f"❌ Error al aceptar conexión {family_type}: {e}")
 
 def iniciar_servidor(host=None, port=None, directorio=None):
-    """
-    Inicia el servidor en Variante 2 (hardening):
-    - Dos sockets: IPv4 (0.0.0.0) e IPv6 (:: con IPV6_V6ONLY=1)
-    - Un hilo accept() por cada socket
-    """
     # Defaults
     host = host or os.getenv("SERVER_HOST", "0.0.0.0")      # ignorado en hardening por utils.network
     port = port or int(os.getenv("SERVER_PORT", 5005))
