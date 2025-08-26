@@ -4,178 +4,188 @@ import ssl
 import os
 
 def crear_socket_servidor(host, port, return_socket=True, stack_disponible=None):
-
-    # Lista para almacenar los sockets creados exitosamente
     sockets_creados = []
-    
-    # Usar información de disponibilidad si se proporciona
+    servidor_v6 = None
+    servidor_v4 = None
+
+    # Fallback si no pasan disponibilidad: intentamos ambos por defecto
     if stack_disponible is None:
-        stack_disponible = {'ipv4': True, 'ipv6': True}  # Intentar ambos por defecto
-    
-    # Crear socket IPv6 si está disponible
+        stack_disponible = {'ipv4': True, 'ipv6': True}
+
+    # IPv6
+
     if stack_disponible.get('ipv6', True):
         try:
-            # Intentar crear un socket IPv6
             servidor_v6 = socket.socket(socket.AF_INET6, socket.SOCK_STREAM)
             servidor_v6.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
-            
-            # Configurar IPV6_V6ONLY=1 para evitar conflictos con el socket IPv4
             try:
+                # separa pilas: sin IPv4-mapped
                 servidor_v6.setsockopt(socket.IPPROTO_IPV6, socket.IPV6_V6ONLY, 1)
             except OSError:
-                # Algunos sistemas no soportan esta opción, pero no es crítico
                 pass
-                
-            # Intentar hacer bind a la dirección IPv6
+
+            bind_ok = False
+
+            # Mapeos rápidos si el host viene en notación IPv4
             if host == "0.0.0.0":
-                # Si se especificó 0.0.0.0, usar :: para IPv6 (todas las interfaces)
-                servidor_v6.bind(("::", port))
+                sockaddr = ("::", port)
+                servidor_v6.bind(sockaddr)
+                bind_ok = True
             elif host == "127.0.0.1":
-                # Si se especificó 127.0.0.1, usar ::1 para IPv6 (loopback)
-                servidor_v6.bind(("::1", port))
+                sockaddr = ("::1", port)
+                servidor_v6.bind(sockaddr)
+                bind_ok = True
             else:
-                # Intentar usar la dirección proporcionada
+                # Resolver y probar TODAS las direcciones, filtrando AF_INET6
                 try:
-                    # Verificar si es una dirección IPv6 válida
-                    socket.inet_pton(socket.AF_INET6, host)
-                    servidor_v6.bind((host, port))
-                except socket.error:
-                    # No es una IPv6 válida, intentar resolver como nombre de host
+                    addr_list = socket.getaddrinfo(host, port, socket.AF_UNSPEC, socket.SOCK_STREAM)
+                except socket.gaierror:
+                    addr_list = []
+
+                for family, socktype, proto, canon, sockaddr in addr_list:
+                    if family != socket.AF_INET6:
+                        continue
                     try:
-                        addr_info = socket.getaddrinfo(host, port, socket.AF_INET6, socket.SOCK_STREAM)
-                        if addr_info:
-                            servidor_v6.bind(addr_info[0][4])
-                        else:
-                            raise socket.error("No se pudo resolver el nombre de host a IPv6")
-                    except (socket.gaierror, socket.error):
-                        # No se pudo resolver a IPv6, cerrar el socket
-                        servidor_v6.close()
-                        servidor_v6 = None
-            
-            # Si llegamos aquí y servidor_v6 no es None, configurar para escuchar
-            if servidor_v6:
+                        servidor_v6.bind(sockaddr)
+                        bind_ok = True
+                        break
+                    except OSError:
+                        continue
+
+            if bind_ok:
                 servidor_v6.listen(128)
-                logging.info(f"✅ Servidor IPv6 iniciado en [::] o [{host}]:{port}")
+                try:
+                    bound = servidor_v6.getsockname()
+                    logging.info(f"✅ Servidor IPv6 iniciado en [{bound[0]}]:{bound[1]}")
+                except Exception:
+                    logging.info(f"✅ Servidor IPv6 iniciado (bind OK)")
                 sockets_creados.append(servidor_v6)
-                
-                # Si solo queremos verificar, cerrar y retornar
                 if not return_socket:
                     servidor_v6.close()
                     return True
-                    
+            else:
+                if servidor_v6:
+                    servidor_v6.close()
+                servidor_v6 = None
+
         except OSError as e:
-            logging.warning(f"No se pudo iniciar servidor IPv6: {e}")
-            if 'servidor_v6' in locals() and servidor_v6:
+            logging.warning(f"❌ No se pudo iniciar servidor IPv6: {e}")
+            if servidor_v6:
                 servidor_v6.close()
+                servidor_v6 = None
     else:
-        logging.info("ℹ️ Omitiendo creación de socket IPv6 porque no está disponible")
-    
-    # Crear socket IPv4 si está disponible
+        logging.info("ℹ️ Omitiendo socket IPv6 (no disponible)")
+
+
+    # IPv4
+
     if stack_disponible.get('ipv4', True):
         try:
-            # Intentar crear un socket IPv4
             servidor_v4 = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
             servidor_v4.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
-            
-            # Intentar hacer bind a la dirección IPv4
+
+            bind_ok = False
+
+            # Mapeos rápidos si el host viene en notación IPv6
             if host == "::":
-                # Si se especificó ::, usar 0.0.0.0 para IPv4 (todas las interfaces)
-                servidor_v4.bind(("0.0.0.0", port))
+                sockaddr = ("0.0.0.0", port)
+                servidor_v4.bind(sockaddr)
+                bind_ok = True
             elif host == "::1":
-                # Si se especificó ::1, usar 127.0.0.1 para IPv4 (loopback)
-                servidor_v4.bind(("127.0.0.1", port))
+                sockaddr = ("127.0.0.1", port)
+                servidor_v4.bind(sockaddr)
+                bind_ok = True
             else:
-                # Intentar usar la dirección proporcionada
+                # Resolver y probar TODAS las direcciones, filtrando AF_INET
                 try:
-                    # Verificar si es una dirección IPv4 válida
-                    socket.inet_pton(socket.AF_INET, host)
-                    servidor_v4.bind((host, port))
-                except socket.error:
-                    # No es una IPv4 válida, intentar resolver como nombre de host
+                    addr_list = socket.getaddrinfo(host, port, socket.AF_UNSPEC, socket.SOCK_STREAM)
+                except socket.gaierror:
+                    addr_list = []
+
+                for family, socktype, proto, canon, sockaddr in addr_list:
+                    if family != socket.AF_INET:
+                        continue
                     try:
-                        addr_info = socket.getaddrinfo(host, port, socket.AF_INET, socket.SOCK_STREAM)
-                        if addr_info:
-                            servidor_v4.bind(addr_info[0][4])
-                        else:
-                            raise socket.error("No se pudo resolver el nombre de host a IPv4")
-                    except (socket.gaierror, socket.error):
-                        # No se pudo resolver a IPv4, cerrar el socket
-                        servidor_v4.close()
-                        servidor_v4 = None
-            
-            # Si llegamos aquí y servidor_v4 no es None, configurar para escuchar
-            if servidor_v4:
+                        servidor_v4.bind(sockaddr)
+                        bind_ok = True
+                        break
+                    except OSError:
+                        continue
+
+            if bind_ok:
                 servidor_v4.listen(128)
-                logging.info(f"✅ Servidor IPv4 iniciado en 0.0.0.0 o {host}:{port}")
+                try:
+                    bound = servidor_v4.getsockname()
+                    logging.info(f"✅ Servidor IPv4 iniciado en {bound[0]}:{bound[1]}")
+                except Exception:
+                    logging.info(f"✅ Servidor IPv4 iniciado (bind OK)")
                 sockets_creados.append(servidor_v4)
-                
-                # Si solo queremos verificar, cerrar y retornar
                 if not return_socket:
                     servidor_v4.close()
                     return True
-                    
+            else:
+                if servidor_v4:
+                    servidor_v4.close()
+                servidor_v4 = None
+
         except OSError as e:
-            logging.warning(f"No se pudo iniciar servidor IPv4: {e}")
-            if 'servidor_v4' in locals() and servidor_v4:
+            logging.warning(f"❌ No se pudo iniciar servidor IPv4: {e}")
+            if servidor_v4:
                 servidor_v4.close()
+                servidor_v4 = None
     else:
-        logging.info("ℹ️ Omitiendo creación de socket IPv4 porque no está disponible")
+        logging.info("ℹ️ Omitiendo socket IPv4 (no disponible)")
 
-    # Verificar si se creó al menos un socket
+    # Resultado
     if sockets_creados:
-        if return_socket:
-            return sockets_creados
-        else:
-            return True
-    else:
-        # Si llegamos aquí, no pudimos crear ningún socket
-        raise OSError("No se pudo crear un socket para escuchar conexiones")
+        return sockets_creados if return_socket else True
+    raise OSError("No se pudo crear un socket para escuchar conexiones")
 
-def configurar_contexto_ssl(cert_path, key_path):
-    contexto = ssl.create_default_context(ssl.Purpose.CLIENT_AUTH)
-
-    if not os.path.exists(cert_path) or not os.path.exists(key_path):
-        logging.error(f"❌ ERROR: No se encontraron los certificados SSL en {cert_path} o {key_path}.")
-        return None
-
-    contexto.load_cert_chain(certfile=cert_path, keyfile=key_path)
-    return contexto
 
 def verificar_stack():
-    """
-    Verifica la disponibilidad de IPv4 (0.0.0.0) e IPv6 (::) en el sistema.
-    
-    Returns:
-        dict: Un diccionario con las claves 'ipv4' e 'ipv6' indicando si cada protocolo está disponible.
-    """
-    stack_disponible = {
-        'ipv4': False,
-        'ipv6': False
-    }
-    
-    # Verificar IPv4
+    stack_disponible = {'ipv4': False, 'ipv6': False}
+
+    # IPv4
     try:
-        sock_v4 = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-        sock_v4.bind(('0.0.0.0', 0))  # Puerto 0 para que el sistema asigne uno automáticamente
-        sock_v4.close()
+        s4 = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+        s4.bind(('0.0.0.0', 0))
+        s4.close()
         stack_disponible['ipv4'] = True
         logging.info("✅ Stack IPv4 (0.0.0.0) disponible")
     except OSError as e:
         logging.warning(f"❌ Stack IPv4 no disponible: {e}")
-    
-    # Verificar IPv6
+
+    # IPv6
     try:
-        sock_v6 = socket.socket(socket.AF_INET6, socket.SOCK_STREAM)
-        # Configurar IPV6_V6ONLY=1 para evitar conflictos con IPv4
+        s6 = socket.socket(socket.AF_INET6, socket.SOCK_STREAM)
         try:
-            sock_v6.setsockopt(socket.IPPROTO_IPV6, socket.IPV6_V6ONLY, 1)
+            s6.setsockopt(socket.IPPROTO_IPV6, socket.IPV6_V6ONLY, 1)
         except OSError:
             pass
-        sock_v6.bind(('::', 0))  # Puerto 0 para que el sistema asigne uno automáticamente
-        sock_v6.close()
+        s6.bind(('::', 0))
+        s6.close()
         stack_disponible['ipv6'] = True
         logging.info("✅ Stack IPv6 (::) disponible")
     except OSError as e:
         logging.warning(f"❌ Stack IPv6 no disponible: {e}")
-    
+
+    # 📢 Resumen final
+    if stack_disponible['ipv4'] and stack_disponible['ipv6']:
+        print("🌍 Esta computadora soporta **IPv4 e IPv6** (Dual Stack).")
+    elif stack_disponible['ipv4']:
+        print("🌍 Esta computadora soporta **solo IPv4**.")
+    elif stack_disponible['ipv6']:
+        print("🌍 Esta computadora soporta **solo IPv6**.")
+    else:
+        print("❌ Esta computadora no soporta ni IPv4 ni IPv6 para bind.")
+
     return stack_disponible
+
+
+def configurar_contexto_ssl(cert_path, key_path):
+    contexto = ssl.create_default_context(ssl.Purpose.CLIENT_AUTH)
+    if not os.path.exists(cert_path) or not os.path.exists(key_path):
+        logging.error(f"❌ ERROR: No se encontraron los certificados SSL en {cert_path} o {key_path}.")
+        return None
+    contexto.load_cert_chain(certfile=cert_path, keyfile=key_path)
+    return contexto
