@@ -164,6 +164,8 @@ def _escuchar_conexiones_socket(servidor_sock: socket.socket, contexto_ssl: ssl.
                 args=(conexion_ssl, direccion, directorio),
                 daemon=True
             ).start()
+            # 🧵 Print informativo de hilo de cliente levantado
+            print(f"🧵 Hilo para cliente {ip_cliente} ({family_type}) levantado")
 
         except Exception as e:
             logging.error(f"❌ Error al aceptar conexión {family_type}: {e}")
@@ -211,6 +213,9 @@ def iniciar_servidor(host=None, port=None, directorio=None):
             )
             hilos.append(hilo)
             hilo.start()
+            # 🧵 Print informativo de hilo de socket levantado
+            fam = "IPv6" if sock.family == socket.AF_INET6 else "IPv4"
+            print(f"🧵 Hilo de escucha {fam} levantado")
 
         # Mantener proceso vivo hasta Ctrl+C
         try:

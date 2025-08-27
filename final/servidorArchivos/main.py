@@ -105,6 +105,9 @@ def iniciar_servidor_ssl(host=None, port=None, directorio=None):
             )
             hilos.append(hilo)
             hilo.start()
+            # 🧵 Print informativo de hilo de socket levantado
+            family_type = "IPv6" if sock.family == socket.AF_INET6 else "IPv4"
+            print(f"🧵 Hilo de socket {family_type} levantado")
 
         # Esperar a que los hilos terminen (o usar algún mecanismo de señalización)
         try:
@@ -167,6 +170,8 @@ def _escuchar_conexiones_socket(servidor, contexto, directorio):
                         args=(conexion_ssl, direccion, directorio),
                         daemon=True
                     ).start()
+                    # 🧵 Print informativo de hilo de cliente levantado
+                    print(f"🧵 Hilo para cliente {ip_cliente} ({family_type}) levantado")
                 except ssl.SSLError as error:
                     logging.error(f"🔒 Error SSL con {ip_cliente}: {error}")
                     conexion.close()
