@@ -374,7 +374,7 @@ def rename_file(old_name, new_name):
         print_info(f"Renombrando archivo {BOLD}{old_name}{RESET} a {BOLD}{new_name}{RESET}...")
         
         # Enviar comando RENOMBRAR
-        response = send_command(connection, f"RENOMBRAR {old_name} {new_name}")
+        response = send_command(connection, f'RENOMBRAR "{old_name}" "{new_name}"')
         
         if "✅" in response:
             print_success(f"Archivo renombrado correctamente de {BOLD}{old_name}{RESET} a {BOLD}{new_name}{RESET}")
@@ -410,7 +410,7 @@ def verify_file(filename=None):
         # Enviar comando VERIFICAR
         command = "VERIFICAR"
         if filename:
-            command = f"VERIFICAR {filename}"
+            command = f'VERIFICAR "{filename}"'
             print_info(f"Verificando archivo {BOLD}{filename}{RESET}...")
         else:
             print_info("Verificando todos los archivos...")
@@ -422,7 +422,7 @@ def verify_file(filename=None):
         connection.close()
         
         # Procesar la respuesta para mostrarla de forma más amigable
-        if "✅" in response:
+        if "✅" in response or "📋 Estado de verificación" in response:
             # Mostrar encabezado
             print_header("RESULTADO DE LA VERIFICACIÓN")
             
