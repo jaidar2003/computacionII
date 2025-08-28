@@ -93,6 +93,13 @@ def _cmd_descargar_archivo(partes, directorio_base, usuario_id=None, conexion=No
     nombre_archivo = partes[1]
     return descargar_archivo(directorio_base, nombre_archivo, conexion)
 
+@requiere_permiso('usuario')
+@validar_argumentos(min_args=1, max_args=1, 
+                   mensaje_error="❌ Formato incorrecto. Usa: SUBIR nombre_archivo")
+def _cmd_subir_archivo(partes, directorio_base, usuario_id=None, conexion=None):
+    nombre_archivo = partes[1]
+    return crear_archivo(directorio_base, nombre_archivo, None, conexion)
+
 @requiere_permiso('admin')
 @validar_argumentos(num_args=0, 
                    mensaje_error="❌ Formato incorrecto. Usa: LISTAR_USUARIOS")

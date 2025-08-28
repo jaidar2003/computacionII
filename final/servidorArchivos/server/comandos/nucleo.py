@@ -14,7 +14,8 @@ from .manejadores import (
     _cmd_listar_archivos, _cmd_crear_archivo, _cmd_eliminar_archivo,
     _cmd_renombrar_archivo, _cmd_solicitar_cambio_permisos,
     _cmd_aprobar_solicitud_permisos, _cmd_ver_solicitudes_permisos,
-    _cmd_verificar_archivo, _cmd_descargar_archivo, _cmd_listar_usuarios_sistema
+    _cmd_verificar_archivo, _cmd_descargar_archivo, _cmd_subir_archivo,
+    _cmd_listar_usuarios_sistema
 )
 
 # Mapeo de comandos a sus manejadores
@@ -28,7 +29,7 @@ COMANDOS = {
     "VER_SOLICITUDES": _cmd_ver_solicitudes_permisos,
     "VERIFICAR": _cmd_verificar_archivo,
     "DESCARGAR": _cmd_descargar_archivo,
-    "SUBIR": _cmd_crear_archivo,  # SUBIR es un alias para CREAR con contenido
+    "SUBIR": _cmd_subir_archivo,
     "LISTAR_USUARIOS": _cmd_listar_usuarios_sistema,  # Comando para administradores
 }
 

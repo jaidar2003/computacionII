@@ -51,8 +51,8 @@ def crear_archivo(directorio_base, nombre_archivo, hash_esperado=None, conexion=
         if os.path.exists(ruta):
             return f"⚠️ El archivo '{nombre_archivo}' ya existe."
 
-        # Si tenemos hash y conexión, esperamos recibir el contenido del archivo
-        if hash_esperado and conexion:
+        # Si tenemos conexión, esperamos recibir el contenido del archivo
+        if conexion:
             # Enviar mensaje de aceptación
             _enviar_mensaje(conexion, f"✅ Listo para recibir '{nombre_archivo}'")
 
@@ -99,7 +99,7 @@ def crear_archivo(directorio_base, nombre_archivo, hash_esperado=None, conexion=
         _iniciar_verificacion(ruta, hash_esperado)
 
         # Retornar mensaje apropiado (solo si no enviamos ya una respuesta)
-        if not (hash_esperado and conexion):
+        if not conexion:
             if hash_esperado:
                 return f"✅ Archivo '{nombre_archivo}' creado y enviado para verificación con hash."
             else:

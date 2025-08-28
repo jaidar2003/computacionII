@@ -169,11 +169,14 @@ def upload_file(file_path):
         # Autenticar con la sesión guardada
         _authenticate_with_session(connection)
         
+        # Recibir el prompt de comando
+        command_prompt = receive_prompt(connection)
+        
         # Implementar nuestra propia función de subida con barra de progreso
         try:
             # Enviar comando SUBIR con el nombre del archivo
-            command = f"SUBIR {filename}"
-            connection.sendall(command.encode('utf-8'))
+            command = f'SUBIR "{filename}"'
+            send_response(connection, command)
             
             # Recibir respuesta inicial (si el servidor está listo para recibir)
             initial_response = connection.recv(1024).decode('utf-8').strip()
@@ -182,6 +185,8 @@ def upload_file(file_path):
                 connection.close()
                 return
             
+            # Enviar el tamaño del archivo primero (como espera el servidor)
+            connection.sendall(str(file_size).encode("utf-8"))
             # Leer y enviar el archivo con barra de progreso
             with open(file_path, 'rb') as f:
                 with tqdm(total=file_size, unit='B', unit_scale=True, desc=f"Subiendo {filename}") as pbar:
@@ -233,7 +238,7 @@ def download_file(filename):
         command_prompt = receive_prompt(connection)
         
         # Enviar comando DESCARGAR
-        command = f"DESCARGAR {filename}"
+        command = f'DESCARGAR "{filename}"'
         send_response(connection, command)
         
         # Recibir mensaje de confirmación del servidor
