@@ -144,7 +144,7 @@ def _registrar_evento(resultado):
         nombre_archivo = os.path.basename(resultado['ruta'])
 
         mensaje_detallado = (
-            f"{resultado['estado'].upper()} - "
+            f"📄 {nombre_archivo}: {resultado['estado'].upper()} - "
             f"Integridad: {resultado['integridad']} - "
             f"Antivirus: {resultado['virus']} - "
             f"{resultado['mensaje']}"

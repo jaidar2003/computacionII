@@ -187,7 +187,14 @@ def _calcular_hash_archivo(ruta_archivo):
         return hashlib.sha256(contenido).hexdigest()
 
 def _iniciar_verificacion(ruta, hash_esperado=None):
+    # Print de debugging para verificar que se está iniciando la verificación
+    nombre_archivo = os.path.basename(ruta)
+    print(f"🔍 DEBUG: Iniciando verificación automática para '{nombre_archivo}'...")
+    print(f"    📁 Ruta: {ruta}")
+    print(f"    🔑 Hash esperado: {hash_esperado or 'No especificado'}")
+    
     verificar_integridad_y_virus.delay(ruta, hash_esperado)
+    print(f"✅ DEBUG: Tarea de verificación enviada a Celery para '{nombre_archivo}'")
 
 def descargar_archivo(directorio_base, nombre_archivo, conexion=None):
     try:
