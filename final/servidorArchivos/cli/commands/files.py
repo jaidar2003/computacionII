@@ -11,6 +11,47 @@ from ..utils.visual import (
 )
 from tqdm import tqdm
 
+def _parse_verification_summary_line(line):
+    """
+    Intenta parsear una línea de resumen tipo:
+    '📄 nombre.ext: OK - Integridad: válida - Antivirus: limpio - ✅ Archivo verificado con éxito.'
+    Retorna un dict con {nombre, estado, integridad, antivirus, mensaje} o None si no matchea.
+    """
+    try:
+        l = line.strip()
+        if l.startswith("📄"):
+            l = l[1:].strip()
+        if ": " not in l:
+            return None
+        nombre, resto = l.split(": ", 1)
+        partes = [p.strip() for p in resto.split(" - ") if p.strip()]
+        if not partes:
+            return None
+        estado = partes[0]
+        integridad = None
+        antivirus = None
+        mensaje = ""
+        for p in partes[1:]:
+            if p.lower().startswith("integridad"):
+                kv = p.split(":", 1)
+                if len(kv) == 2:
+                    integridad = kv[1].strip()
+            elif p.lower().startswith("antivirus"):
+                kv = p.split(":", 1)
+                if len(kv) == 2:
+                    antivirus = kv[1].strip()
+            else:
+                mensaje = p
+        return {
+            "nombre": nombre.strip(),
+            "estado": estado.strip().upper(),
+            "integridad": (integridad or "").strip(),
+            "antivirus": (antivirus or "").strip(),
+            "mensaje": mensaje.strip(),
+        }
+    except Exception:
+        return None
+
 def _authenticate_with_session(connection):
     """Autenticar con la sesión guardada"""
     session = load_session()
@@ -423,44 +464,56 @@ def verify_file(filename=None):
         
         # Procesar la respuesta para mostrarla de forma más amigable
         if "✅" in response or "📋 Estado de verificación" in response:
-            # Mostrar encabezado
-            print_header("RESULTADO DE LA VERIFICACIÓN")
-            
-            # Extraer información de la respuesta
-            lines = response.split('\n')
-            
-            # Procesar cada línea
-            for line in lines:
-                line = line.strip()
-                if not line:
-                    continue
-                
-                # Colorear según el tipo de información
-                if "Hash" in line or "SHA-256" in line:
-                    # Resaltar el hash
-                    parts = line.split(": ", 1)
-                    if len(parts) == 2:
-                        print(f"{INFO}{parts[0]}: {BOLD}{parts[1]}{RESET}")
+            lines = [ln.strip() for ln in response.split('\n') if ln.strip()]
+            summary = None
+            for ln in lines:
+                parsed = _parse_verification_summary_line(ln)
+                if parsed:
+                    summary = parsed
+                    break
+
+            if summary and summary.get("estado") == "OK":
+                # Render “card” de éxito
+                print_header("RESULTADO DE LA VERIFICACIÓN")
+                print(f"{SUCCESS}╔══════════════════════════════════════════════╗{RESET}")
+                print(f"{SUCCESS}║  🎉  Verificación exitosa                     {RESET}")
+                print(f"{SUCCESS}╟──────────────────────────────────────────────╢{RESET}")
+                print(f"{SUCCESS}║  Archivo:    {BOLD}{summary['nombre']}{RESET}")
+                print(f"{SUCCESS}║  Estado:     {BOLD}✅ OK{RESET}")
+                print(f"{SUCCESS}║  Integridad: {BOLD}{summary.get('integridad','-')}{RESET}")
+                print(f"{SUCCESS}║  Antivirus:  {BOLD}{summary.get('antivirus','-')}{RESET}")
+                if summary.get("mensaje"):
+                    msg = summary['mensaje']
+                    if msg.startswith("✅ "):
+                        msg = msg[2:].strip()
+                    print(f"{SUCCESS}║  Mensaje:    {msg}{RESET}")
+                print(f"{SUCCESS}╚══════════════════════════════════════════════╝{RESET}")
+            else:
+                # Comportamiento anterior (colorear línea por línea)
+                print_header("RESULTADO DE LA VERIFICACIÓN")
+                for line in lines:
+                    if "Hash" in line or "SHA-256" in line:
+                        parts = line.split(": ", 1)
+                        if len(parts) == 2:
+                            print(f"{INFO}{parts[0]}: {BOLD}{parts[1]}{RESET}")
+                        else:
+                            print(line)
+                    elif "Integridad" in line:
+                        if "correcta" in line.lower() or "verificada" in line.lower() or "válida" in line.lower():
+                            print(f"{SUCCESS}{line}{RESET}")
+                        else:
+                            print(f"{ERROR}{line}{RESET}")
+                    elif "Antivirus" in line:
+                        if "limpio" in line.lower() or "seguro" in line.lower():
+                            print(f"{SUCCESS}{line}{RESET}")
+                        else:
+                            print(f"{ERROR}{line}{RESET}")
+                    elif "Error" in line or "❌" in line:
+                        print(f"{ERROR}{line}{RESET}")
+                    elif "✅" in line:
+                        print(f"{SUCCESS}{line}{RESET}")
                     else:
                         print(line)
-                elif "Integridad" in line:
-                    # Colorear según resultado
-                    if "correcta" in line.lower() or "verificada" in line.lower():
-                        print(f"{SUCCESS}{line}{RESET}")
-                    else:
-                        print(f"{ERROR}{line}{RESET}")
-                elif "Antivirus" in line:
-                    # Colorear según resultado
-                    if "limpio" in line.lower() or "seguro" in line.lower():
-                        print(f"{SUCCESS}{line}{RESET}")
-                    else:
-                        print(f"{ERROR}{line}{RESET}")
-                elif "Error" in line or "❌" in line:
-                    print(f"{ERROR}{line}{RESET}")
-                elif "✅" in line:
-                    print(f"{SUCCESS}{line}{RESET}")
-                else:
-                    print(line)
         else:
             print_error(f"Error al verificar archivo: {response}")
     
