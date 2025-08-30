@@ -114,9 +114,8 @@ def descargar_archivo():
     file_list = files.list_files(silent=True)
     
     if not file_list:
-        print_warning("No hay archivos disponibles para descargar")
-        input("\nPresiona Enter para continuar...")
-        return
+        print_warning("No se pudo obtener la lista en modo silencioso. Reintentando...")
+        files.list_files(silent=False)
     
     filename = input(f"\n{BOLD}Nombre del archivo a descargar: {RESET}")
     
@@ -138,9 +137,8 @@ def eliminar_archivo():
     file_list = files.list_files(silent=True)
     
     if not file_list:
-        print_warning("No hay archivos disponibles para eliminar")
-        input("\nPresiona Enter para continuar...")
-        return
+        print_warning("No se pudo obtener la lista en modo silencioso. Reintentando...")
+        files.list_files(silent=False)
     
     filename = input(f"\n{BOLD}Nombre del archivo a eliminar: {RESET}")
     
@@ -162,9 +160,8 @@ def renombrar_archivo():
     file_list = files.list_files(silent=True)
     
     if not file_list:
-        print_warning("No hay archivos disponibles para renombrar")
-        input("\nPresiona Enter para continuar...")
-        return
+        print_warning("No se pudo obtener la lista en modo silencioso. Reintentando...")
+        files.list_files(silent=False)
     
     old_name = input(f"\n{BOLD}Nombre actual del archivo: {RESET}")
     
@@ -187,36 +184,56 @@ def verificar_archivo():
     """Función para verificar un archivo"""
     clear_screen()
     print_header("VERIFICAR ARCHIVO")
-    
-    # Primero mostrar la lista de archivos disponibles
+
+    # Mostrar SIEMPRE la lista visible (no silenciosa) y obtener nombres en una sola llamada
     print_info("Archivos disponibles:")
-    file_list = files.list_files(silent=True)
-    
+    file_list = files.list_files(silent=False) or []  # imprime tabla y devuelve nombres
+
+    # Filtrar .hash
+    file_list = [f for f in file_list if not f.endswith('.hash')]
+
     if not file_list:
-        print_warning("No hay archivos disponibles para verificar")
-        input("\nPresiona Enter para continuar...")
-        return
-    
+        print_warning("No se pudo construir la lista para selección rápida. Puedes escribir el nombre manualmente o verificar todos.")
+    else:
+        # Muestra selección rápida por número
+        print(f"\n{BOLD}Opciones rápidas:{RESET}")
+        for idx, name in enumerate(file_list, start=1):
+            print(f"{idx}. {name}")
+        print("0. Verificar TODOS los archivos")
+
+    # Siempre ofrecer opciones manuales
+
     print(f"\n{BOLD}Opciones:{RESET}")
-    print(f"1. Verificar un archivo específico")
-    print(f"2. Verificar todos los archivos")
-    
-    option = input(f"\n{BOLD}Selecciona una opción (1-2): {RESET}")
-    
-    if option == "1":
-        filename = input(f"{BOLD}Nombre del archivo a verificar: {RESET}")
-        
-        if not filename:
-            print_error("El nombre del archivo es obligatorio")
+    print("1. Verificar un archivo escribiendo el nombre")
+    print("2. Verificar todos los archivos")
+
+    option = input(f"\n{BOLD}Selecciona una opción (0-2 o número de archivo): {RESET}").strip()
+
+    # Si ingresa un número de la lista
+    if option.isdigit():
+        num = int(option)
+        if num == 0:
+            files.verify_file()  # todos
             input("\nPresiona Enter para continuar...")
             return
-        
-        files.verify_file(filename)
+        if 1 <= num <= len(file_list):
+            filename = file_list[num - 1]
+            files.verify_file(filename)
+            input("\nPresiona Enter para continuar...")
+            return
+        # si el número no es válido, cae a las opciones por nombre
+
+    if option == "1":
+        filename = input(f"{BOLD}Nombre del archivo a verificar: {RESET}").strip()
+        if not filename:
+            print_error("El nombre del archivo es obligatorio")
+        else:
+            files.verify_file(filename)
     elif option == "2":
         files.verify_file()
     else:
         print_error("Opción inválida")
-    
+
     input("\nPresiona Enter para continuar...")
 
 def cerrar_sesion():

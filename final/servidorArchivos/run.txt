@@ -180,3 +180,7 @@ python main.py -m cli
 # /Users/juanmaaidar/PycharmProjects/computacionII/final/servidorArchivos/INSTRUCCIONES_MENU_CLI_ACTUALIZADO.md
 
 
+
+
+celery -A tareas.celery worker --loglevel=info
+

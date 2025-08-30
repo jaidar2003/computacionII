@@ -192,9 +192,23 @@ def _iniciar_verificacion(ruta, hash_esperado=None):
     print(f"🔍 DEBUG: Iniciando verificación automática para '{nombre_archivo}'...")
     print(f"    📁 Ruta: {ruta}")
     print(f"    🔑 Hash esperado: {hash_esperado or 'No especificado'}")
-    
-    verificar_integridad_y_virus.delay(ruta, hash_esperado)
-    print(f"✅ DEBUG: Tarea de verificación enviada a Celery para '{nombre_archivo}'")
+
+    try:
+        res = verificar_integridad_y_virus.delay(ruta, hash_esperado)
+        # Si Celery no está instalado, nuestro decorador retorna el dict resultado
+        if isinstance(res, dict):
+            print(f"✅ DEBUG: Verificación ejecutada en modo síncrono (sin Celery) para '{nombre_archivo}'")
+        else:
+            print(f"✅ DEBUG: Tarea de verificación enviada a Celery para '{nombre_archivo}'")
+    except Exception as e:
+        # Fallback: ejecutar directamente si no se pudo encolar
+        print(f"⚠️ DEBUG: No se pudo encolar tarea en Celery ({e}). Ejecutando verificación en modo síncrono...")
+        try:
+            resultado = verificar_integridad_y_virus(ruta, hash_esperado)
+            # verificar_integridad_y_virus ya registra en BD
+            print(f"✅ DEBUG: Verificación síncrona completada: {resultado.get('estado')}")
+        except Exception as e2:
+            print(f"❌ ERROR: Falló la verificación síncrona: {e2}")
 
 def descargar_archivo(directorio_base, nombre_archivo, conexion=None):
     try:
@@ -306,7 +320,38 @@ def verificar_estado_archivo(directorio_base, nombre_archivo):
         if resultado:
             return f"📋 Estado de verificación para '{nombre_archivo}':\n{resultado[1]}"
         else:
-            return f"ℹ️ No hay información de verificación para '{nombre_archivo}'."
+            # No hay registro: iniciar verificación ahora
+            try:
+                res = verificar_integridad_y_virus.delay(ruta)
+                # Caso síncrono (sin Celery): res es el dict resultado
+                if isinstance(res, dict):
+                    estado = res.get('estado', 'desconocido')
+                    integridad = res.get('integridad', 'no verificada')
+                    virus = res.get('virus', 'no escaneado')
+                    mensaje = res.get('mensaje', '')
+                    return (
+                        f"📋 Estado de verificación para '{nombre_archivo}':\n"
+                        f"{estado.upper()} - Integridad: {integridad} - Antivirus: {virus} - {mensaje}"
+                    )
+                # Caso asíncrono (Celery activo): devolver aviso de inicio
+                return (
+                    f"📋 Estado de verificación para '{nombre_archivo}':\n"
+                    f"🔄 Verificación iniciada. Vuelve a consultar en unos segundos."
+                )
+            except Exception as e:
+                # Fallback: intento síncrono directo
+                try:
+                    res = verificar_integridad_y_virus(ruta)
+                    estado = res.get('estado', 'desconocido')
+                    integridad = res.get('integridad', 'no verificada')
+                    virus = res.get('virus', 'no escaneado')
+                    mensaje = res.get('mensaje', '')
+                    return (
+                        f"📋 Estado de verificación para '{nombre_archivo}':\n"
+                        f"{estado.upper()} - Integridad: {integridad} - Antivirus: {virus} - {mensaje}"
+                    )
+                except Exception as e2:
+                    return f"❌ Error al iniciar verificación: {e2}"
 
     except Exception as error:
         return f"❌ Error al consultar estado: {error}"
@@ -363,6 +408,8 @@ def verificar_estado_todos_archivos(directorio_base):
                     estado_resumido = "❌ CORRUPTO"
                 elif "INFECTADO -" in estado:
                     estado_resumido = "🦠 INFECTADO"
+                elif "PARCIAL -" in estado:
+                    estado_resumido = "⚠️ PARCIAL"
                 else:
                     estado_resumido = "⚠️ DESCONOCIDO"
 

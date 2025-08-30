@@ -57,7 +57,7 @@ def list_files(silent=False):
                       Útil para actualizar la lista de archivos en el modo interactivo.
     
     Returns:
-        list: Lista de nombres de archivos si silent es True, None en caso contrario.
+        list: Lista de nombres de archivos siempre (vacía si hay error o no hay archivos).
     """
     if not silent:
         print_info("Conectando al servidor...")
@@ -67,7 +67,7 @@ def list_files(silent=False):
     if not connection:
         if not silent:
             print_error("No se pudo conectar al servidor. Asegúrate de que el servidor esté en ejecución.")
-        return [] if silent else None
+        return []
     
     try:
         # Autenticar con la sesión guardada
@@ -88,7 +88,7 @@ def list_files(silent=False):
         # Cerrar conexión
         connection.close()
         
-        # Lista para almacenar nombres de archivos (para modo silencioso)
+        # Lista para almacenar nombres de archivos
         file_names = []
         
         # Procesar la respuesta para mostrarla de forma más amigable
@@ -96,7 +96,7 @@ def list_files(silent=False):
             if not silent:
                 print_warning("No hay archivos disponibles en el servidor.")
                 print_info("Usa el comando 'upload' para subir archivos.")
-            return file_names if silent else None
+            return file_names
         
         # Extraer la lista de archivos de la respuesta
         # La respuesta tiene un formato como:
@@ -125,7 +125,7 @@ def list_files(silent=False):
                 size_part = line.split(' (')[1].split(')')[0].strip()
                 date_part = line.split(' - ')[1].strip() if ' - ' in line else ""
                 
-                # Agregar nombre a la lista para modo silencioso
+                # Agregar nombre a la lista
                 file_names.append(name_part)
                 
                 if not silent:
@@ -135,15 +135,15 @@ def list_files(silent=False):
                 if not silent:
                     print(line)
         
-        # Retornar lista de nombres de archivos si es modo silencioso
-        return file_names if silent else None
+        # Retornar lista de nombres de archivos
+        return file_names
         
     except Exception as e:
         if not silent:
             print_error(f"Error al listar archivos: {str(e)}")
         if connection:
             connection.close()
-        return [] if silent else None
+        return []
 
 @check_auth
 def upload_file(file_path):
