@@ -65,29 +65,15 @@ python main.py -m cli
 
 # ¡Esto ahora lanza automáticamente el menú numerado!
 
-Paso 3: Opciones adicionales del CLI integrado
----------------------------------------------
-# Forzar el modo menú explícitamente
-python main.py -m cli --menu
+Paso 3: Opciones del CLI integrado
+---------------------------------
+Actualmente solo está soportado el menú interactivo:
+python main.py -m cli
 
-# Usar el modo simple (solo login/registro/salir)
-python main.py -m cli --simple
-
-# Usar comandos tradicionales directamente
-python main.py -m cli status
-python main.py -m cli login usuario contraseña
-python main.py -m cli list
-python main.py -m cli upload /ruta/archivo.txt
-
-Paso 4: Métodos alternativos (siguen funcionando)
-------------------------------------------------
-# Desde la raíz del proyecto usando wrappers
-cd /Users/juanmaaidar/PycharmProjects/computacionII
-python menu_cli_wrapper.py
-# o
-python run_cli.py
-# o
-python simple_cli.py
+Paso 4: Nota
+-----------
+Se eliminaron los métodos alternativos y wrappers. Usa únicamente:
+python main.py -m cli
 
 Paso 5: Configuración del CLI
 -----------------------------
@@ -135,34 +121,13 @@ CAMBIOS IMPORTANTES EN ESTA ACTUALIZACIÓN
 ✅ **Menú por defecto**: `python main.py -m cli` lanza automáticamente el menú numerado
 ✅ **Configuración automática**: Detecta automáticamente SERVER_HOST/SERVER_PORT del .env
 ✅ **Sin advertencias**: Ya no verás advertencias sobre variables faltantes
-✅ **Múltiples modos**: Soporte para modo menú, simple y comandos tradicionales
+✅ **CLI simplificado**: Solo menú interactivo disponible con `python main.py -m cli`
 ✅ **Ubicación actualizada**: CLI movido a servidorArchivos/cli/ para mejor organización
 
-COMANDOS TRADICIONALES DEL CLI (modo avanzado)
-=============================================
-
-# Autenticación
-python main.py -m cli login nombre_usuario contraseña
-python main.py -m cli register nuevo_usuario contraseña
-python main.py -m cli logout
-
-# Gestión de archivos
-python main.py -m cli list                                # o ls
-python main.py -m cli upload /ruta/al/archivo.txt
-python main.py -m cli download nombre_archivo.txt
-python main.py -m cli delete nombre_archivo.txt           # o rm
-python main.py -m cli rename nombre_viejo.txt nombre_nuevo.txt
-python main.py -m cli verify nombre_archivo.txt           # o verify (sin argumentos para todos)
-
-# Gestión de permisos
-python main.py -m cli request-permission admin            # o request
-python main.py -m cli view-requests                       # o requests
-python main.py -m cli approve ID_SOLICITUD aprobar
-python main.py -m cli list-users                          # o users
-
-# Utilidades
-python main.py -m cli status                              # Estado de la sesión
-python main.py -m cli --help                              # Ver ayuda
+MODOS AVANZADOS DEL CLI
+=======================
+Este proyecto ahora solo soporta el menú interactivo:
+python main.py -m cli
 
 RECOMENDACIÓN DE USO
 ===================

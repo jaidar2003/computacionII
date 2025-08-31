@@ -215,8 +215,20 @@ def upload_file(file_path):
         
         # Implementar nuestra propia función de subida con barra de progreso
         try:
-            # Enviar comando SUBIR con el nombre del archivo
-            command = f'SUBIR "{filename}"'
+            # Permitir al usuario pegar un SHA-256 opcional
+            try:
+                user_hash = input("Ingresa SHA-256 del archivo (opcional, 64 hex): ").strip()
+            except Exception:
+                user_hash = ""
+            if user_hash:
+                if not (len(user_hash) == 64 and all(c in '0123456789abcdefABCDEF' for c in user_hash)):
+                    print_warning("Hash inválido. Debe ser 64 caracteres hexadecimales. Se omitirá y el servidor calculará el hash.")
+                    user_hash = ""
+            # Enviar comando SUBIR con el nombre del archivo y hash opcional
+            if user_hash:
+                command = f'SUBIR "{filename}" {user_hash.lower()}'
+            else:
+                command = f'SUBIR "{filename}"'
             send_response(connection, command)
             
             # Recibir respuesta inicial (si el servidor está listo para recibir)
@@ -432,95 +444,155 @@ def rename_file(old_name, new_name):
 
 @check_auth
 def verify_file(filename=None):
-    """Verificar la integridad de un archivo o todos los archivos"""
+    """Verificar la integridad de un archivo o todos los archivos.
+    Opción B: el CLI espera con polling hasta obtener un resultado definitivo.
+    Además, imprime comparación de hashes (.hash vs .sha256) cuando esté disponible.
+    """
+    import time
+    import re
+    import tempfile
+
+    def _descargar_hash_texto(remote_name: str) -> str | None:
+        tmp_dir = tempfile.gettempdir()
+        local_path = os.path.join(tmp_dir, f"cli_tmp_{os.getpid()}_{os.path.basename(remote_name)}")
+        try:
+            conn = create_ssl_connection(config.SERVER_HOST, config.SERVER_PORT)
+            if not conn:
+                return None
+            try:
+                _authenticate_with_session(conn)
+                receive_prompt(conn)
+                send_response(conn, f'DESCARGAR "{remote_name}"')
+                hdr = conn.recv(1024).decode('utf-8', errors='ignore')
+                if "listo para enviar" not in hdr.lower():
+                    return None
+                conn.sendall(b"LISTO")
+                with open(local_path, "wb") as f:
+                    while True:
+                        data = conn.recv(8192)
+                        if not data:
+                            break
+                        f.write(data)
+            finally:
+                try:
+                    conn.close()
+                except Exception:
+                    pass
+            content = None
+            try:
+                with open(local_path, "r") as f:
+                    content = f.read()
+            finally:
+                try:
+                    os.remove(local_path)
+                except Exception:
+                    pass
+            if not content:
+                return None
+            m = re.search(r"\b[0-9a-fA-F]{64}\b", content)
+            return m.group(0) if m else None
+        except Exception:
+            return None
+
     if filename:
         print_info(f"Conectando al servidor para verificar el archivo {BOLD}{filename}{RESET}...")
     else:
         print_info("Conectando al servidor para verificar todos los archivos...")
-    
-    # Crear conexión SSL
-    connection = create_ssl_connection(config.SERVER_HOST, config.SERVER_PORT)
-    if not connection:
-        print_error("No se pudo conectar al servidor. Asegúrate de que el servidor esté en ejecución.")
-        return
-    
-    try:
-        # Autenticar con la sesión guardada
-        _authenticate_with_session(connection)
-        
-        # Enviar comando VERIFICAR
-        command = "VERIFICAR"
-        if filename:
-            command = f'VERIFICAR "{filename}"'
-            print_info(f"Verificando archivo {BOLD}{filename}{RESET}...")
-        else:
-            print_info("Verificando todos los archivos...")
-            print_warning("Esta operación puede tardar varios minutos para muchos archivos.")
-        
-        response = send_command(connection, command)
-        
-        # Cerrar conexión
-        connection.close()
-        
-        # Procesar la respuesta para mostrarla de forma más amigable
-        if "✅" in response or "📋 Estado de verificación" in response:
-            lines = [ln.strip() for ln in response.split('\n') if ln.strip()]
-            summary = None
-            for ln in lines:
-                parsed = _parse_verification_summary_line(ln)
-                if parsed:
-                    summary = parsed
-                    break
 
-            if summary and summary.get("estado") == "OK":
-                # Render “card” de éxito
-                print_header("RESULTADO DE LA VERIFICACIÓN")
-                print(f"{SUCCESS}╔══════════════════════════════════════════════╗{RESET}")
-                print(f"{SUCCESS}║  🎉  Verificación exitosa                     {RESET}")
-                print(f"{SUCCESS}╟──────────────────────────────────────────────╢{RESET}")
-                print(f"{SUCCESS}║  Archivo:    {BOLD}{summary['nombre']}{RESET}")
-                print(f"{SUCCESS}║  Estado:     {BOLD}✅ OK{RESET}")
-                print(f"{SUCCESS}║  Integridad: {BOLD}{summary.get('integridad','-')}{RESET}")
-                print(f"{SUCCESS}║  Antivirus:  {BOLD}{summary.get('antivirus','-')}{RESET}")
-                if summary.get("mensaje"):
-                    msg = summary['mensaje']
-                    if msg.startswith("✅ "):
-                        msg = msg[2:].strip()
-                    print(f"{SUCCESS}║  Mensaje:    {msg}{RESET}")
-                print(f"{SUCCESS}╚══════════════════════════════════════════════╝{RESET}")
-            else:
-                # Comportamiento anterior (colorear línea por línea)
-                print_header("RESULTADO DE LA VERIFICACIÓN")
-                for line in lines:
-                    if "Hash" in line or "SHA-256" in line:
-                        parts = line.split(": ", 1)
-                        if len(parts) == 2:
-                            print(f"{INFO}{parts[0]}: {BOLD}{parts[1]}{RESET}")
-                        else:
-                            print(line)
-                    elif "Integridad" in line:
-                        if "correcta" in line.lower() or "verificada" in line.lower() or "válida" in line.lower():
-                            print(f"{SUCCESS}{line}{RESET}")
-                        else:
-                            print(f"{ERROR}{line}{RESET}")
-                    elif "Antivirus" in line:
-                        if "limpio" in line.lower() or "seguro" in line.lower():
-                            print(f"{SUCCESS}{line}{RESET}")
-                        else:
-                            print(f"{ERROR}{line}{RESET}")
-                    elif "Error" in line or "❌" in line:
-                        print(f"{ERROR}{line}{RESET}")
-                    elif "✅" in line:
-                        print(f"{SUCCESS}{line}{RESET}")
-                    else:
-                        print(line)
-        else:
-            print_error(f"Error al verificar archivo: {response}")
-    
+    # Función para disparar VERIFICAR una sola vez
+    def _disparar_verificar_once():
+        conn = create_ssl_connection(config.SERVER_HOST, config.SERVER_PORT)
+        if not conn:
+            raise RuntimeError("No se pudo conectar al servidor")
+        try:
+            _authenticate_with_session(conn)
+            receive_prompt(conn)
+            cmd = f'VERIFICAR "{filename}"' if filename else 'VERIFICAR'
+            send_response(conn, cmd)
+            resp = receive_prompt(conn)
+            return resp
+        finally:
+            try:
+                conn.close()
+            except Exception:
+                pass
+
+    # Función para consultar estado de solo lectura (no encola)
+    def _consultar_estado_readonly():
+        conn = create_ssl_connection(config.SERVER_HOST, config.SERVER_PORT)
+        if not conn:
+            raise RuntimeError("No se pudo conectar al servidor")
+        try:
+            _authenticate_with_session(conn)
+            receive_prompt(conn)
+            cmd = f'ESTADO "{filename}"' if filename else 'ESTADO'
+            send_response(conn, cmd)
+            resp = receive_prompt(conn)
+            return resp
+        finally:
+            try:
+                conn.close()
+            except Exception:
+                pass
+
+    # Polling hasta resultado final
+    max_wait_seconds = 120
+    interval = 2
+    waited = 0
+
+    print_info(f"Verificando {'archivo ' + BOLD + filename + RESET if filename else 'todos los archivos'}...")
+    if not filename:
+        print_warning("Esta operación puede tardar varios minutos para muchos archivos.")
+    print_header("RESULTADO DE LA VERIFICACIÓN")
+
+    # Disparar verificación una sola vez (puede devolver 'iniciada' o un resultado inmediato)
+    try:
+        first_resp = _disparar_verificar_once()
     except Exception as e:
-        print_error(f"Error de conexión: {str(e)}")
-        if connection:
-            connection.close()
+        print_error(f"Error al iniciar verificación: {e}")
+        return
+
+    final_response = None
+    low_first = first_resp.lower()
+    if not ("verificación iniciada" in low_first or "vuelve a consultar" in low_first):
+        # Si ya hay un resultado definitivo en la primera respuesta, úsalo
+        final_response = first_resp
+    else:
+        # Poll con ESTADO (solo lectura)
+        while waited <= max_wait_seconds:
+            resp = _consultar_estado_readonly()
+            low = resp.lower()
+            if (" ok " in f" {low} ") or ("corrupto" in low) or ("infectado" in low) or ("parcial" in low) or ("integridad:" in low) or ("antivirus:" in low):
+                final_response = resp
+                break
+            time.sleep(interval)
+            waited += interval
+
+    if not final_response:
+        print_error("⏳ Tiempo de espera agotado sin obtener un resultado final. Intenta nuevamente.")
+        return
+
+    print(final_response)
+
+    # Intentar mostrar comparación de hashes
+    if filename:
+        expected = _descargar_hash_texto(f"{filename}.hash")
+        calculated = _descargar_hash_texto(f"{filename}.sha256")
+        if expected or calculated:
+            print_header("COMPARACIÓN DE HASHES")
+            if expected:
+                print_info(f"Hash esperado (.hash):   {BOLD}{expected}{RESET}")
+            else:
+                print_warning("No se encontró archivo .hash (hash esperado).")
+            if calculated:
+                print_info(f"Hash calculado (.sha256): {BOLD}{calculated}{RESET}")
+            else:
+                print_warning("No se encontró archivo .sha256 (hash calculado por el servidor).")
+            if expected and calculated:
+                if expected.lower() == calculated.lower():
+                    print_success("🔑 Ambos hashes coinciden.")
+                else:
+                    print_error("❌ Los hashes NO coinciden.")
 
 def format_size(bytes):
     """Formatear tamaño en bytes a formato legible"""

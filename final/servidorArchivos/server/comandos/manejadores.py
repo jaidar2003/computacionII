@@ -10,7 +10,8 @@ from .decoradores import requiere_permiso, validar_argumentos
 # Importar funciones de operaciones con archivos
 from .operaciones_archivos import (
     listar_archivos, crear_archivo, eliminar_archivo, renombrar_archivo,
-    verificar_estado_archivo, descargar_archivo, verificar_estado_todos_archivos
+    verificar_estado_archivo, descargar_archivo, verificar_estado_todos_archivos,
+    estado_archivo_en_bd, estado_todos_en_bd
 )
 
 # Importar funciones de gestión de permisos
@@ -94,14 +95,27 @@ def _cmd_descargar_archivo(partes, directorio_base, usuario_id=None, conexion=No
     return descargar_archivo(directorio_base, nombre_archivo, conexion)
 
 @requiere_permiso('usuario')
-@validar_argumentos(min_args=1, max_args=1, 
-                   mensaje_error="❌ Formato incorrecto. Usa: SUBIR nombre_archivo")
+@validar_argumentos(min_args=1, max_args=2, 
+                   mensaje_error="❌ Formato incorrecto. Usa: SUBIR nombre_archivo [sha256]")
 def _cmd_subir_archivo(partes, directorio_base, usuario_id=None, conexion=None):
     nombre_archivo = partes[1]
-    return crear_archivo(directorio_base, nombre_archivo, None, conexion)
+    hash_esperado = partes[2] if len(partes) >= 3 else None
+    return crear_archivo(directorio_base, nombre_archivo, hash_esperado, conexion)
 
 @requiere_permiso('admin')
 @validar_argumentos(num_args=0, 
                    mensaje_error="❌ Formato incorrecto. Usa: LISTAR_USUARIOS")
 def _cmd_listar_usuarios_sistema(partes, directorio_base, usuario_id=None):
     return listar_usuarios_sistema()
+
+@requiere_permiso('usuario')
+def _cmd_estado_archivo(partes, directorio_base, usuario_id=None):
+    """Consulta de estado (solo lectura) sin encolar verificación."""
+    # ESTADO            -> todos
+    # ESTADO nombre.ext -> uno
+    if len(partes) == 1:
+        return estado_todos_en_bd(directorio_base)
+    elif len(partes) == 2:
+        return estado_archivo_en_bd(directorio_base, partes[1])
+    else:
+        return "❌ Uso: ESTADO [archivo]"

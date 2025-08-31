@@ -42,7 +42,7 @@ def verificar_configuracion():
             SERVER_PORT = os.getenv("SERVER_PORT")
         else:
             print("⚠️ El archivo .env existe pero faltan variables de configuración.")
-            print("ℹ️ Ejecuta 'cli.py config-server' para configurar el servidor.")
+            print("ℹ️ Inicia el menú CLI con: 'python main.py -m cli' o edita el archivo .env para configurar el servidor.")
             sys.exit(1)
     
     # Convertir puerto a entero si existe
@@ -51,7 +51,7 @@ def verificar_configuracion():
             SERVER_PORT = int(SERVER_PORT)
         except ValueError:
             print(f"⚠️ El puerto configurado '{SERVER_PORT}' no es válido. Debe ser un número.")
-            print("ℹ️ Ejecuta 'cli.py config-server' para configurar el servidor.")
+            print("ℹ️ Inicia el menú CLI con: 'python main.py -m cli' o edita el archivo .env para configurar el servidor.")
             sys.exit(1)
 
 def recargar_configuracion():

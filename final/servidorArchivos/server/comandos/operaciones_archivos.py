@@ -87,13 +87,24 @@ def crear_archivo(directorio_base, nombre_archivo, hash_esperado=None, conexion=
             with open(ruta, 'wb') as _:
                 pass
 
-        # Calcular el hash del archivo
+        # Calcular el hash del archivo (calculado por el servidor)
         hash_calculado = _calcular_hash_archivo(ruta)
-        
-        # Crear archivo de hash con el mismo nombre pero con extensión .hash
-        ruta_hash = f"{ruta}.hash"
-        with open(ruta_hash, 'w') as f:
-            f.write(hash_calculado)
+
+        # Preparar rutas para expected y calculated
+        ruta_hash_expected = f"{ruta}.hash"      # Hash esperado (del usuario o compat)
+        ruta_hash_calculated = f"{ruta}.sha256"  # Hash calculado por el servidor (auditoría)
+
+        if hash_esperado:
+            # Guardar el hash esperado provisto por el usuario
+            with open(ruta_hash_expected, 'w') as f:
+                f.write(hash_esperado)
+            # Guardar el hash calculado del servidor
+            with open(ruta_hash_calculated, 'w') as f:
+                f.write(hash_calculado)
+        else:
+            # Compatibilidad: si no se provee hash esperado, usar el calculado como referencia
+            with open(ruta_hash_expected, 'w') as f:
+                f.write(hash_calculado)
 
         # Iniciar verificación en segundo plano
         _iniciar_verificacion(ruta, hash_esperado)
@@ -317,12 +328,20 @@ def verificar_estado_archivo(directorio_base, nombre_archivo):
         
         conn.close()
 
-        if resultado:
-            return f"📋 Estado de verificación para '{nombre_archivo}':\n{resultado[1]}"
-        else:
-            # No hay registro: iniciar verificación ahora
+        def _disparar_y_formatear(ruta_local):
             try:
-                res = verificar_integridad_y_virus.delay(ruta)
+                # Cargar hash esperado desde archivo si existe
+                hash_expected = None
+                ruta_expected = f"{ruta_local}.hash"
+                try:
+                    if os.path.exists(ruta_expected):
+                        with open(ruta_expected, 'r') as rf:
+                            cand = rf.read().strip()
+                            if len(cand) == 64 and all(c in '0123456789abcdef' for c in cand.lower()):
+                                hash_expected = cand
+                except Exception:
+                    pass
+                res = verificar_integridad_y_virus.delay(ruta_local, hash_expected)
                 # Caso síncrono (sin Celery): res es el dict resultado
                 if isinstance(res, dict):
                     estado = res.get('estado', 'desconocido')
@@ -338,10 +357,21 @@ def verificar_estado_archivo(directorio_base, nombre_archivo):
                     f"📋 Estado de verificación para '{nombre_archivo}':\n"
                     f"🔄 Verificación iniciada. Vuelve a consultar en unos segundos."
                 )
-            except Exception as e:
+            except Exception:
                 # Fallback: intento síncrono directo
                 try:
-                    res = verificar_integridad_y_virus(ruta)
+                    # Pasar también el hash esperado en el fallback
+                    hash_expected = None
+                    ruta_expected = f"{ruta_local}.hash"
+                    try:
+                        if os.path.exists(ruta_expected):
+                            with open(ruta_expected, 'r') as rf:
+                                cand = rf.read().strip()
+                                if len(cand) == 64 and all(c in '0123456789abcdef' for c in cand.lower()):
+                                    hash_expected = cand
+                    except Exception:
+                        pass
+                    res = verificar_integridad_y_virus(ruta_local, hash_expected)
                     estado = res.get('estado', 'desconocido')
                     integridad = res.get('integridad', 'no verificada')
                     virus = res.get('virus', 'no escaneado')
@@ -352,6 +382,35 @@ def verificar_estado_archivo(directorio_base, nombre_archivo):
                     )
                 except Exception as e2:
                     return f"❌ Error al iniciar verificación: {e2}"
+
+        if resultado:
+            # Verificar recencia: comparar fecha del log vs mtime de archivo y .hash
+            try:
+                from datetime import datetime as _dt
+                fecha_log = _dt.strptime(resultado[2], '%Y-%m-%d %H:%M:%S')
+            except Exception:
+                # Si no se puede parsear la fecha, disparar verificación para evitar estado obsoleto
+                return _disparar_y_formatear(ruta)
+
+            ultimo_mtime = os.path.getmtime(ruta)
+            ruta_hash = f"{ruta}.hash"
+            if os.path.exists(ruta_hash):
+                try:
+                    mtime_hash = os.path.getmtime(ruta_hash)
+                    if mtime_hash > ultimo_mtime:
+                        ultimo_mtime = mtime_hash
+                except Exception:
+                    pass
+
+            if fecha_log.timestamp() < ultimo_mtime:
+                # Registro desactualizado; re-verificar
+                return _disparar_y_formatear(ruta)
+
+            # Registro vigente; devolver
+            return f"📋 Estado de verificación para '{nombre_archivo}':\n{resultado[1]}"
+        else:
+            # No hay registro: iniciar verificación ahora
+            return _disparar_y_formatear(ruta)
 
     except Exception as error:
         return f"❌ Error al consultar estado: {error}"
@@ -427,3 +486,64 @@ def verificar_estado_todos_archivos(directorio_base):
 
     except Exception as error:
         return f"❌ Error al consultar estado de archivos: {error}"
+
+
+# --- Solo lectura de estado desde BD (no encola tareas) ---
+
+def estado_archivo_en_bd(directorio_base, nombre_archivo):
+    try:
+        if not _es_nombre_archivo_valido(nombre_archivo):
+            return "❌ Nombre de archivo inválido."
+        ruta = os.path.join(directorio_base, nombre_archivo)
+        if not os.path.exists(ruta):
+            return f"⚠️ Archivo '{nombre_archivo}' no encontrado."
+
+        conn = obtener_conexion()
+        cursor = conn.cursor()
+        cursor.execute(
+            """
+            SELECT mensaje, fecha FROM log_eventos
+            WHERE accion='VERIFICACION' AND (mensaje LIKE ? OR mensaje LIKE ?)
+            ORDER BY fecha DESC LIMIT 1
+            """,
+            (f"%{nombre_archivo}%", f"%{ruta}%")
+        )
+        row = cursor.fetchone()
+        conn.close()
+
+        if row:
+            return f"📋 Estado de verificación para '{nombre_archivo}':\n{row[0]}"
+        return f"📋 Estado de verificación para '{nombre_archivo}':\nℹ️ No hay información de verificación"
+    except Exception as e:
+        return f"❌ Error al consultar estado: {e}"
+
+
+def estado_todos_en_bd(directorio_base):
+    try:
+        archivos = [f for f in os.listdir(directorio_base) if os.path.isfile(os.path.join(directorio_base, f))]
+        if not archivos:
+            return "📂 No hay archivos en el servidor para verificar."
+
+        conn = obtener_conexion()
+        cursor = conn.cursor()
+        resultados = []
+        for nombre in archivos:
+            ruta = os.path.join(directorio_base, nombre)
+            cursor.execute(
+                """
+                SELECT mensaje, fecha FROM log_eventos
+                WHERE accion='VERIFICACION' AND (mensaje LIKE ? OR mensaje LIKE ?)
+                ORDER BY fecha DESC LIMIT 1
+                """,
+                (f"%{nombre}%", f"%{ruta}%")
+            )
+            row = cursor.fetchone()
+            if row:
+                resultados.append(f"📄 {nombre}: {row[0]}")
+            else:
+                resultados.append(f"📄 {nombre}: ℹ️ Sin información de verificación")
+        conn.close()
+
+        return "📋 Estado de verificación de todos los archivos:\n" + "\n".join(resultados)
+    except Exception as e:
+        return f"❌ Error al consultar estado de archivos: {e}"

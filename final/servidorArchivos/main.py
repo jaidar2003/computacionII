@@ -356,66 +356,17 @@ def _iniciar_modo_api(args):
         print("\n🛑 Apagando API Flask...")
 
 def _iniciar_modo_cli(args):
-    print(f"🖥️ Iniciando CLI del Servidor de Archivos...")
-    
-    # Restaurar los argumentos originales y procesarlos para el CLI
-    import sys
-    import os
-    
-    # Obtener los argumentos originales completos
-    original_args = sys.argv.copy()
-    
-    # Encontrar el índice donde aparece 'cli'
-    cli_index = -1
-    for i, arg in enumerate(original_args):
-        if arg == 'cli' or (i > 0 and original_args[i-1] in ['-m', '--modo'] and arg == 'cli'):
-            cli_index = i
-            break
-    
-    # Construir nuevos argumentos para el CLI
-    if cli_index >= 0 and cli_index + 1 < len(original_args):
-        # Tomar todos los argumentos después de 'cli'
-        cli_args = original_args[cli_index + 1:]
-    else:
-        cli_args = []
-    
-    # Configurar variables de entorno para el servidor si se especificaron
+    print(f"🖥️ Iniciando CLI del Servidor de Archivos (modo menú)...")
+
+    # Pasar host/port al entorno si se especifican
     if args.host:
         os.environ["SERVER_HOST"] = args.host
     if args.port:
         os.environ["SERVER_PORT"] = str(args.port)
-    
-    # Verificar si se solicitó el modo simple o menu
-    use_simple_mode = False
-    use_menu_mode = False
-    
-    for arg in cli_args[:]:  # Usar copia para poder modificar durante iteración
-        if arg == '--simple':
-            use_simple_mode = True
-            cli_args.remove('--simple')
-            break
-        elif arg == '--menu':
-            use_menu_mode = True
-            cli_args.remove('--menu')
-            break
-    
-    # Si no se especifica ningún argumento, usar modo menu por defecto
-    if not cli_args and not use_simple_mode:
-        use_menu_mode = True
-    
-    # Reconstruir sys.argv para el CLI
-    sys.argv = [original_args[0]] + cli_args
-    
-    # Ejecutar el CLI en el modo correspondiente
-    if use_simple_mode:
-        from cli.simple.simple_menu import main as simple_main
-        simple_main()
-    elif use_menu_mode:
-        from cli.menu_cli import main as menu_main
-        menu_main()
-    else:
-        from cli.cli import main as cli_main
-        cli_main()
+
+    # Siempre ejecutar el menú CLI
+    from cli.menu_cli import main as menu_main
+    menu_main()
 
 
 if __name__ == "__main__":
