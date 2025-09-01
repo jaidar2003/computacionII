@@ -7,8 +7,6 @@ import warnings
 import subprocess
 import ssl
 import socket
-import selectors
-import re
 from dotenv import load_dotenv
 
 # 🛡️ Ignorar advertencias de deprecación
@@ -19,10 +17,9 @@ sys.path.append(os.path.abspath(os.path.dirname(__file__)))
 # 📚 Importaciones de módulos propios
 from server.servidor import manejar_cliente
 from baseDeDatos.db import crear_tablas
-from cli.cliente import iniciar_cliente
 from utils.config import verificar_configuracion_env, crear_directorio_si_no_existe, configurar_argumentos
 from utils.config import CERT_PATH, KEY_PATH, BASE_DIR
-from utils.network import crear_socket_servidor, configurar_contexto_ssl
+from utils.network import crear_socket_servidor, configurar_contexto_ssl, verificar_stack
 from utils.ip import obtener_ip_local
 
 # 📝 Configurar logging
@@ -34,25 +31,11 @@ verificar_configuracion_env()
 # ⚙️ Crear tablas si no existen
 crear_tablas()
 
-def actualizar_ip_en_env(nueva_ip):
-    env_path = os.path.join(BASE_DIR, '.env')
-    
-    # Leer el contenido actual del archivo .env
-    with open(env_path, 'r') as file:
-        contenido = file.read()
-    
-    # Reemplazar la IP actual con la nueva IP
-    patron = r'SERVIDOR_HOST=.*'
-    nuevo_contenido = re.sub(patron, f'SERVIDOR_HOST={nueva_ip}', contenido)
-    
-    # Escribir el nuevo contenido al archivo .env
-    with open(env_path, 'w') as file:
-        file.write(nuevo_contenido)
 
 def iniciar_servidor_ssl(host=None, port=None, directorio=None):
     # Usar valores predeterminados si no se proporcionan
-    host = host or os.getenv("SERVIDOR_HOST", "127.0.0.1")
-    port = port or int(os.getenv("SERVIDOR_PORT", 1608))
+    host = host or os.getenv("SERVER_HOST", "0.0.0.0")
+    port = port or int(os.getenv("SERVER_PORT", 5005))
     directorio = directorio or os.getenv("SERVIDOR_DIR", os.path.join(os.path.dirname(BASE_DIR), "archivos"))
     # 📂 Asegurar que el directorio de archivos exista
     crear_directorio_si_no_existe(directorio)
@@ -63,8 +46,27 @@ def iniciar_servidor_ssl(host=None, port=None, directorio=None):
         return
 
     try:
-        # 🌐 Configurar sockets para IPv4 e IPv6
-        sockets_servidor = crear_socket_servidor(host, port)
+        # 🌐 Verificar stack de red disponible (IPv4/IPv6)
+        stack_disponible = verificar_stack()
+        
+        if not stack_disponible['ipv4'] and not stack_disponible['ipv6']:
+            logging.error("❌ No hay stack de red disponible (ni IPv4 ni IPv6)")
+            print("❌ No se pudo iniciar el servidor: No hay stack de red disponible")
+            return
+            
+        print("🔍 Verificación de stack de red:")
+        if stack_disponible['ipv4']:
+            print("   ✅ IPv4 (0.0.0.0) disponible")
+        else:
+            print("   ❌ IPv4 no disponible")
+            
+        if stack_disponible['ipv6']:
+            print("   ✅ IPv6 (::) disponible")
+        else:
+            print("   ❌ IPv6 no disponible")
+        
+        # 🌐 Configurar sockets para IPv4 e IPv6 según disponibilidad
+        sockets_servidor = crear_socket_servidor(host, port, stack_disponible=stack_disponible)
 
         # Verificar si se crearon sockets
         if not sockets_servidor:
@@ -83,10 +85,18 @@ def iniciar_servidor_ssl(host=None, port=None, directorio=None):
             hilo = threading.Thread(
                 target=_escuchar_conexiones_socket,
                 args=(sock, contexto, directorio),
-                daemon=True
+                daemon=True,
+                name=f"socket-listener-{'IPv6' if sock.family == socket.AF_INET6 else 'IPv4'}"
             )
             hilos.append(hilo)
             hilo.start()
+            # 🧵 Hilo de socket levantado con PID/TID
+            family_type = "IPv6" if sock.family == socket.AF_INET6 else "IPv4"
+            try:
+                import os
+                print(f"🧵 Hilo de socket {family_type} levantado (PID: {os.getpid()}, TID: {hilo.ident})")
+            except Exception:
+                print(f"🧵 Hilo de socket {family_type} levantado")
 
         # Esperar a que los hilos terminen (o usar algún mecanismo de señalización)
         try:
@@ -102,8 +112,11 @@ def iniciar_servidor_ssl(host=None, port=None, directorio=None):
             print(f"\n❌ ERROR: No se pudo iniciar el servidor en {host}")
             print(f"❌ Si te equivocaste con la dirección IP, el servidor no puede conectarse a {host}")
             print(f"ℹ️ La dirección IP local detectada es: {ip_local}")
-            print(f"ℹ️ Para usar esta IP, ejecuta el servidor con: -H {ip_local}")
-            print(f"ℹ️ O modifica SERVIDOR_HOST={ip_local} en el archivo .env")
+            
+            print("ℹ️ Para arrancar con esta IP sin editar .env, ejecuta:")
+            print(f"   python final/servidorArchivos/main.py -m server -H {ip_local} -p {port}")
+            print("ℹ️ También puedes editar manualmente SERVER_HOST en tu archivo .env si lo deseas.")
+            
             # Salir con código de error
             sys.exit(1)
         else:
@@ -111,10 +124,21 @@ def iniciar_servidor_ssl(host=None, port=None, directorio=None):
     except Exception as error:
         logging.error(f"❌ Error al iniciar el servidor: {error}")
 
+# Conjunto global para rastrear IPs que ya se han conectado
+_ips_conectadas = set()
+
 def _escuchar_conexiones_socket(servidor, contexto, directorio):
     family_type = "IPv6" if servidor.family == socket.AF_INET6 else "IPv4"
     print(f"👂 Esperando conexiones {family_type} entrantes...")
-
+    # PID/TID del hilo aceptador
+    try:
+        import os, threading
+        print(f"🧵 Hilo de socket {family_type} activo (PID: {os.getpid()}, TID: {threading.get_ident()})")
+    except Exception:
+        pass
+    
+    global _ips_conectadas
+    
     try:
         while True:
             try:
@@ -123,18 +147,30 @@ def _escuchar_conexiones_socket(servidor, contexto, directorio):
                 # Extraer solo la dirección IP (primer elemento de la tupla)
                 ip_cliente = direccion[0]
                 logging.info(f"✅ Nueva conexión desde {ip_cliente} ({family_type})")
-                print(f"✅ Nueva conexión desde {ip_cliente} ({family_type})")
+                
+                # Solo mostrar mensaje si es la primera vez que vemos esta IP
+                if ip_cliente not in _ips_conectadas:
+                    print(f"✅ Nueva conexión desde {ip_cliente} ({family_type})")
+                    _ips_conectadas.add(ip_cliente)
 
                 try:
                     # Envolver con SSL
                     conexion_ssl = contexto.wrap_socket(conexion, server_side=True)
 
                     # Iniciar hilo para manejar cliente
-                    threading.Thread(
+                    hilo = threading.Thread(
                         target=manejar_cliente,
                         args=(conexion_ssl, direccion, directorio),
-                        daemon=True
-                    ).start()
+                        daemon=True,
+                        name=f"cliente-{ip_cliente}"
+                    )
+                    hilo.start()
+                    # 🧵 Print informativo de hilo de cliente levantado con PID/TID
+                    try:
+                        import os
+                        print(f"🧵 Hilo para cliente {ip_cliente} ({family_type}) levantado (PID: {os.getpid()}, TID: {hilo.ident})")
+                    except Exception:
+                        print(f"🧵 Hilo para cliente {ip_cliente} ({family_type}) levantado")
                 except ssl.SSLError as error:
                     logging.error(f"🔒 Error SSL con {ip_cliente}: {error}")
                     conexion.close()
@@ -278,9 +314,16 @@ def iniciar_servidor_flask():
 
 def _iniciar_modo_servidor(args):
     print(f"🌍 Iniciando Servidor de Archivos Seguro en {args.host}:{args.port}...")
+    
+    # Verificar si la IP proporcionada es diferente de la configurada en .env
+    ip_env = os.getenv("SERVER_HOST", "127.0.0.1")
+    if args.host != ip_env:
+        print(f"   ℹ️  La IP proporcionada ({args.host}) difiere de la configurada en .env ({ip_env}).")
+        print(f"   ℹ️  Se usará {args.host} solo para esta ejecución. Para persistir, edita SERVER_HOST en .env manualmente.")
+    
     if args.host != "127.0.0.1" and args.host != "localhost" and args.host != "0.0.0.0":
         print(f"   ℹ️  Si tienes problemas de conexión, verifica que la dirección IP sea accesible desde tus clientes.")
-        print(f"   ℹ️  Para usar la dirección local estándar, ejecuta con: -H 127.0.0.1 o modifica SERVIDOR_HOST en .env")
+        print(f"   ℹ️  Para usar la dirección local estándar, ejecuta con: -H 127.0.0.1 o modifica SERVER_HOST en .env")
         print(f"   ℹ️  El sistema intentará detectar automáticamente tu IP local si la configurada no es válida.")
     worker_process = iniciar_worker_celery()
 
@@ -296,8 +339,8 @@ def _iniciar_modo_api(args):
     print(f"   ℹ️  Asegúrate de que el servidor de archivos esté en ejecución en {args.host}:{args.port}")
 
     # Actualizar las variables de entorno para la conexión al servidor
-    os.environ["SERVIDOR_HOST"] = args.host
-    os.environ["SERVIDOR_PORT"] = str(args.port)
+    os.environ["SERVER_HOST"] = args.host
+    os.environ["SERVER_PORT"] = str(args.port)
 
     flask_thread = iniciar_servidor_flask()
 
@@ -309,13 +352,19 @@ def _iniciar_modo_api(args):
     except KeyboardInterrupt:
         print("\n🛑 Apagando API Flask...")
 
-def _iniciar_modo_cliente(args):
-    cliente_host = os.getenv("CLIENTE_HOST", "127.0.0.1") if args.host == '0.0.0.0' else args.host
+def _iniciar_modo_cli(args):
+    print(f"🖥️ Iniciando CLI del Servidor de Archivos (modo menú)...")
 
-    if args.verbose:
-        print(f"🌍 Conectando al Servidor de Archivos Seguro en {cliente_host}:{args.port}...")
+    # Pasar host/port al entorno si se especifican
+    if args.host:
+        os.environ["SERVER_HOST"] = args.host
+    if args.port:
+        os.environ["SERVER_PORT"] = str(args.port)
 
-    iniciar_cliente(cliente_host, args.port)
+    # Siempre ejecutar el menú CLI
+    from cli.menu_cli import main as menu_main
+    menu_main()
+
 
 if __name__ == "__main__":
     # 📋 Obtener argumentos de línea de comandos
@@ -330,5 +379,5 @@ if __name__ == "__main__":
         _iniciar_modo_servidor(args)
     elif args.modo == 'api':
         _iniciar_modo_api(args)
-    else:
-        _iniciar_modo_cliente(args)
+    elif args.modo == 'cli':
+        _iniciar_modo_cli(args)

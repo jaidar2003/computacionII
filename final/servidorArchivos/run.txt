@@ -1,29 +1,151 @@
 
+INSTRUCCIONES DE INICIO
+=====================
+
+⚠️ IMPORTANTE: Para que el sistema funcione correctamente, es necesario ejecutar TRES componentes:
+1. El servidor principal (gestiona archivos y conexiones)
+2. La API Flask (interfaz para el frontend)
+3. El worker de Celery (procesa verificaciones en segundo plano)
+
+Si no se ejecuta el worker de Celery, las verificaciones de archivos no funcionarán correctamente.
+
 MacOS
 =====
 
-# Iniciar el servidor de archivos
+# 1. Iniciar el servidor de archivos (en una terminal)
 python /Users/juanmaaidar/PycharmProjects/computacionII/final/servidorArchivos/main.py -m server
 
-# O iniciar solo la API Flask (requiere que el servidor de archivos esté en ejecución)
-python /Users/juanmaaidar/PycharmProjects/computacionII/final/servidorArchivos/main.py -m api -H 192.168.100.146 -p 5005
+# 2. Iniciar la API Flask (en otra terminal)
+python /Users/juanmaaidar/PycharmProjects/computacionII/final/servidorArchivos/main.py -m api -H 192.168.100.191 -p 5005
 
-# Iniciar el cliente
-python /Users/juanmaaidar/PycharmProjects/computacionII/final/servidorArchivos/main.py -m cliente
+# 3. Iniciar el worker de Celery (en otra terminal) - OBLIGATORIO para verificaciones
+cd /Users/juanmaaidar/PycharmProjects/computacionII/final/servidorArchivos
+celery -A tareas.celery worker --loglevel=info
 
-# Iniciar el frontend
-cd final/servidorArchivos/front
+# 4. Iniciar el frontend (en otra terminal)
+cd /Users/juanmaaidar/PycharmProjects/computacionII/final/servidorArchivos/front
 # Editar el archivo .env para configurar VITE_API_URL si la API está en otra máquina
 npm run dev
 
 Linux
 =====
 
-# Iniciar el servidor de archivos
+# 1. Iniciar el servidor de archivos (en una terminal)
 python /home/juanma/PycharmProjects/computacionII/final/servidorArchivos/main.py -m server
 
-# O iniciar solo la API Flask (requiere que el servidor de archivos esté en ejecución)
-python /home/juanma/PycharmProjects/computacionII/final/servidorArchivos/main.py -m api -H 192.168.100.146 -p 5005
+# 2. Iniciar la API Flask (en otra terminal)
+python /home/juanma/PycharmProjects/computacionII/final/servidorArchivos/main.py -m api -H 192.168.100.191 -p 5005
 
-# Iniciar el cliente
-python /home/juanma/PycharmProjects/computacionII/final/servidorArchivos/main.py -m cliente
+# 3. Iniciar el worker de Celery (en otra terminal) - OBLIGATORIO para verificaciones
+cd /home/juanma/PycharmProjects/computacionII/final/servidorArchivos
+celery -A tareas.celery worker --loglevel=info
+
+# 4. Iniciar el frontend (en otra terminal)
+cd /home/juanma/PycharmProjects/computacionII/final/servidorArchivos/front
+# Editar el archivo .env para configurar VITE_API_URL si la API está en otra máquina
+npm run dev
+
+USANDO EL CLI INTEGRADO - ¡NUEVA FUNCIONALIDAD! 🎉
+================================================
+
+⚠️ IMPORTANTE: Antes de usar el CLI, asegúrate de que el servidor esté en ejecución.
+A diferencia del frontend, el CLI se comunica directamente con el servidor mediante sockets SSL,
+sin utilizar la API Flask como intermediario.
+
+Paso 1: Instalar dependencias
+----------------------------
+# Instala las dependencias necesarias para el CLI
+pip install colorama tqdm
+
+Paso 2: **NUEVA FORMA RECOMENDADA** - Usando main.py directamente
+----------------------------------------------------------------
+# Desde la carpeta servidorArchivos (MÉTODO PRINCIPAL)
+cd /Users/juanmaaidar/PycharmProjects/computacionII/final/servidorArchivos
+python main.py -m cli
+
+# ¡Esto ahora lanza automáticamente el menú numerado!
+
+Paso 3: Opciones del CLI integrado
+---------------------------------
+Actualmente solo está soportado el menú interactivo:
+python main.py -m cli
+
+Paso 4: Nota
+-----------
+Se eliminaron los métodos alternativos y wrappers. Usa únicamente:
+python main.py -m cli
+
+Paso 5: Configuración del CLI
+-----------------------------
+# El CLI ahora detecta automáticamente las variables SERVER_HOST/SERVER_PORT del archivo .env
+# Si necesitas cambiar la configuración, edita el archivo:
+nano /Users/juanmaaidar/PycharmProjects/computacionII/final/servidorArchivos/.env
+
+# O especifica el host y puerto directamente:
+python main.py -m cli -H 192.168.100.191 -p 1608
+
+MENÚS DISPONIBLES EN EL CLI
+==========================
+
+Menú principal (sin sesión iniciada):
+------------------------------------
+1. Iniciar sesión
+2. Registrarse
+3. Salir
+
+Menú principal (con sesión iniciada):
+-----------------------------------
+4. Listar archivos
+5. Subir archivo
+6. Descargar archivo
+7. Eliminar archivo
+8. Renombrar archivo
+9. Verificar archivo
+10. Cerrar sesión
+
+Opciones adicionales para administradores:
+-----------------------------------------
+11. Listar usuarios
+12. Ver solicitudes de permisos
+13. Aprobar/rechazar solicitud
+
+Opciones adicionales para usuarios normales:
+-------------------------------------------
+11. Solicitar permisos de administrador
+12. Ver mis solicitudes de permisos
+
+CAMBIOS IMPORTANTES EN ESTA ACTUALIZACIÓN
+========================================
+
+✅ **CLI Integrado**: Ahora se ejecuta directamente desde main.py con `-m cli`
+✅ **Menú por defecto**: `python main.py -m cli` lanza automáticamente el menú numerado
+✅ **Configuración automática**: Detecta automáticamente SERVER_HOST/SERVER_PORT del .env
+✅ **Sin advertencias**: Ya no verás advertencias sobre variables faltantes
+✅ **CLI simplificado**: Solo menú interactivo disponible con `python main.py -m cli`
+✅ **Ubicación actualizada**: CLI movido a servidorArchivos/cli/ para mejor organización
+
+MODOS AVANZADOS DEL CLI
+=======================
+Este proyecto ahora solo soporta el menú interactivo:
+python main.py -m cli
+
+RECOMENDACIÓN DE USO
+===================
+
+Para la experiencia más simple y directa:
+
+```bash
+cd /Users/juanmaaidar/PycharmProjects/computacionII/final/servidorArchivos
+python main.py -m cli
+```
+
+¡Eso es todo! El menú numerado aparecerá automáticamente y podrás navegar de forma intuitiva.
+
+# Para más información, consulta la documentación completa en:
+# /Users/juanmaaidar/PycharmProjects/computacionII/final/servidorArchivos/INSTRUCCIONES_MENU_CLI_ACTUALIZADO.md
+
+
+
+
+celery -A tareas.celery worker --loglevel=info
+

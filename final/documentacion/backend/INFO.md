@@ -18,13 +18,9 @@ Se optó por utilizar threads para manejar múltiples clientes en lugar de proce
 - **Comunicación simplificada**: No se requieren mecanismos de IPC complejos entre threads.
 - **Naturaleza de las operaciones**: Las operaciones de I/O son bloqueantes, lo que hace que los threads sean adecuados ya que pueden esperar eficientemente mientras se completan las operaciones de I/O.
 
-### 3. Implementación Asíncrona con asyncio
+### 3. Modelo actual de concurrencia
 
-Se implementó una versión asíncrona del servidor utilizando asyncio por:
-
-- **Escalabilidad**: Permite manejar miles de conexiones simultáneas con recursos limitados.
-- **Eficiencia**: Evita el bloqueo durante operaciones de I/O, mejorando el rendimiento general.
-- **Modelo de programación moderno**: Facilita el razonamiento sobre operaciones concurrentes con un código más limpio y mantenible.
+La versión vigente del servidor utiliza threads (multi-hilo) para manejar múltiples clientes concurrentes. No se usa asyncio en esta versión. Una posible migración a asyncio se considera una mejora futura.
 
 ### 4. Cola de Tareas Distribuidas con Celery
 
@@ -101,13 +97,9 @@ Se eligió Python por:
 - **Portabilidad**: Funciona en múltiples plataformas sin cambios.
 - **Desarrollo rápido**: Permite implementar funcionalidades complejas con menos código.
 
-### asyncio para Operaciones Asíncronas
+### Concurrencia y tareas en segundo plano
 
-Se utilizó asyncio por:
-
-- **Estándar de la biblioteca**: Forma parte de la biblioteca estándar de Python.
-- **Modelo de programación coherente**: Proporciona un modelo mental claro para la programación asíncrona.
-- **Interoperabilidad**: Se integra bien con otras bibliotecas asíncronas.
+La versión actual no usa asyncio. La concurrencia se maneja con threads, y las tareas en segundo plano pueden procesarse opcionalmente con Celery + Redis.
 
 ### Celery para Tareas Distribuidas
 

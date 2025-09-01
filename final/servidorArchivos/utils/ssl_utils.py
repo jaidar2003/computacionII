@@ -2,71 +2,21 @@ import os
 import sys
 import ssl
 import socket
-import datetime
 import logging
 import errno
 from dotenv import load_dotenv
 
 # Configuración básica
-sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '../..')))
 logger = logging.getLogger(__name__)
 
 # Cargar variables de entorno
 load_dotenv()
 
-# Importaciones de módulos propios
-from cli.ui.estilos import ANSI_VERDE, ANSI_RESET, ANSI_ROJO, ANSI_AMARILLO
-
-# Constantes
-DIAS_AVISO_EXPIRACION = 30  # Días antes de expiración para mostrar advertencia
-
-def verificar_certificado_servidor():
-
-    cert_path = os.getenv("CERT_PATH", os.path.join(os.path.dirname(os.path.dirname(os.path.dirname(os.path.dirname(__file__)))), 
-                           "certificados", "certificado.pem"))
-
-    if not os.path.exists(cert_path):
-        return False, f"No se encontró el certificado del servidor en {cert_path}"
-
-    try:
-        # Leer el contenido del certificado
-        with open(cert_path, 'r') as f:
-            cert_data = f.read()
-
-        # Crear un contexto SSL temporal para analizar el certificado
-        context = ssl.create_default_context()
-        context.load_verify_locations(cadata=cert_data)
-
-        # Obtener información del certificado
-        cert = ssl._ssl._test_decode_cert(cert_path)
-
-        # Extraer fecha de expiración
-        not_after = cert.get('notAfter', '')
-        if not not_after:
-            return False, "No se pudo determinar la fecha de expiración del certificado"
-
-        # Formato de fecha en certificados: 'May 30 00:00:00 2023 GMT'
-        try:
-            expiracion = datetime.datetime.strptime(not_after, '%b %d %H:%M:%S %Y %Z')
-            hoy = datetime.datetime.now()
-
-            # Verificar si ya expiró
-            if hoy > expiracion:
-                return False, f"El certificado del servidor ha expirado el {not_after}"
-
-            # Verificar si está por expirar
-            dias_restantes = (expiracion - hoy).days
-            if dias_restantes <= DIAS_AVISO_EXPIRACION:
-                return True, f"El certificado del servidor expirará en {dias_restantes} días ({not_after})"
-
-            # Certificado válido
-            return True, f"Certificado del servidor válido hasta {not_after}"
-
-        except ValueError as e:
-            return False, f"Error al analizar la fecha de expiración del certificado: {e}"
-
-    except Exception as e:
-        return False, f"Error al verificar el certificado del servidor: {e}"
+# ANSI color codes (previously imported from cli.ui.estilos)
+ANSI_VERDE = "\033[92m"
+ANSI_RESET = "\033[0m"
+ANSI_ROJO = "\033[91m"
+ANSI_AMARILLO = "\033[93m"
 
 def es_direccion_ip(host):
     """Verifica si el host es una dirección IP (IPv4 o IPv6)."""
@@ -103,7 +53,7 @@ def establecer_conexion_ssl(host, port, verificar_cert=True):
             logger.info(f"Activando verificación de hostname para nombre de dominio: {host}")
 
         # Cargar el certificado del servidor como certificado de confianza
-        cert_path = os.getenv("CERT_PATH", os.path.join(os.path.dirname(os.path.dirname(os.path.dirname(os.path.dirname(__file__)))), 
+        cert_path = os.getenv("CERT_PATH", os.path.join(os.path.dirname(os.path.dirname(os.path.dirname(__file__))), 
                                "certificados", "certificado.pem"))
 
         if os.path.exists(cert_path):
@@ -147,7 +97,7 @@ def establecer_conexion_ssl(host, port, verificar_cert=True):
         if hasattr(e, 'errno') and e.errno == errno.ECONNREFUSED:
             print(f"{ANSI_ROJO}❌ Error al establecer conexión: Conexión rechazada{ANSI_RESET}")
             print(f"{ANSI_ROJO}❌ El servidor no está en ejecución o no es accesible en {host}:{port}{ANSI_RESET}")
-            print(f"{ANSI_ROJO}❌ Asegúrate de que el servidor esté en ejecución antes de iniciar el cliente.{ANSI_RESET}")
+            print(f"{ANSI_ROJO}❌ Asegúrate de que el servidor esté en ejecución.{ANSI_RESET}")
             logger.error(f"Conexión rechazada al intentar conectar a {host}:{port}. El servidor no está en ejecución.")
         else:
             print(f"{ANSI_ROJO}❌ Error de red al establecer conexión: {e}{ANSI_RESET}")

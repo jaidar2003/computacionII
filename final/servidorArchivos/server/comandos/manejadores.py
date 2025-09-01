@@ -10,7 +10,8 @@ from .decoradores import requiere_permiso, validar_argumentos
 # Importar funciones de operaciones con archivos
 from .operaciones_archivos import (
     listar_archivos, crear_archivo, eliminar_archivo, renombrar_archivo,
-    verificar_estado_archivo, descargar_archivo, verificar_estado_todos_archivos
+    verificar_estado_archivo, descargar_archivo, verificar_estado_todos_archivos,
+    estado_archivo_en_bd, estado_todos_en_bd
 )
 
 # Importar funciones de gestión de permisos
@@ -20,11 +21,11 @@ from .permisos import (
 )
 
 # Manejadores de comandos
-@requiere_permiso('lectura')
+@requiere_permiso('usuario')
 def _cmd_listar_archivos(partes, directorio_base, usuario_id=None):
     return listar_archivos(directorio_base)
 
-@requiere_permiso('escritura')
+@requiere_permiso('usuario')
 @validar_argumentos(min_args=1, max_args=2, 
                    mensaje_error="❌ Formato incorrecto. Usa: CREAR nombre_archivo [hash]")
 def _cmd_crear_archivo(partes, directorio_base, usuario_id=None, conexion=None):
@@ -36,7 +37,7 @@ def _cmd_crear_archivo(partes, directorio_base, usuario_id=None, conexion=None):
     else:  # len(partes) == 3
         return crear_archivo(directorio_base, nombre_archivo, partes[2], conexion)
 
-@requiere_permiso('escritura')
+@requiere_permiso('usuario')
 @validar_argumentos(num_args=1, 
                    mensaje_error="❌ Formato incorrecto. Usa: ELIMINAR nombre_archivo")
 def _cmd_eliminar_archivo(partes, directorio_base, usuario_id=None):
@@ -44,7 +45,7 @@ def _cmd_eliminar_archivo(partes, directorio_base, usuario_id=None):
     nombre_archivo = partes[1]
     return eliminar_archivo(directorio_base, nombre_archivo)
 
-@requiere_permiso('escritura')
+@requiere_permiso('usuario')
 @validar_argumentos(num_args=2, 
                    mensaje_error="❌ Formato incorrecto. Usa: RENOMBRAR nombre_viejo nombre_nuevo")
 def _cmd_renombrar_archivo(partes, directorio_base, usuario_id=None):
@@ -53,7 +54,7 @@ def _cmd_renombrar_archivo(partes, directorio_base, usuario_id=None):
     nombre_nuevo = partes[2]
     return renombrar_archivo(directorio_base, nombre_viejo, nombre_nuevo)
 
-@requiere_permiso('lectura')
+@requiere_permiso('usuario')
 @validar_argumentos(num_args=1, 
                    mensaje_error="❌ Formato incorrecto. Usa: SOLICITAR_PERMISOS tipo_permiso")
 def _cmd_solicitar_cambio_permisos(partes, directorio_base, usuario_id=None):
@@ -65,13 +66,13 @@ def _cmd_solicitar_cambio_permisos(partes, directorio_base, usuario_id=None):
 def _cmd_aprobar_solicitud_permisos(partes, directorio_base, usuario_id=None):
     return aprobar_cambio_permisos(usuario_id, partes[1], partes[2])
 
-@requiere_permiso('lectura')
+@requiere_permiso('usuario')
 @validar_argumentos(num_args=0, 
                    mensaje_error="❌ Formato incorrecto. Usa: VER_SOLICITUDES")
 def _cmd_ver_solicitudes_permisos(partes, directorio_base, usuario_id=None):
     return ver_solicitudes_permisos(usuario_id)
 
-@requiere_permiso('lectura')
+@requiere_permiso('usuario')
 def _cmd_verificar_archivo(partes, directorio_base, usuario_id=None):
     # Si solo se proporciona el comando VERIFICAR sin argumentos, verificar todos los archivos
     if len(partes) == 1:
@@ -85,7 +86,7 @@ def _cmd_verificar_archivo(partes, directorio_base, usuario_id=None):
     # Si hay más argumentos, mostrar mensaje de error
     return "❌ Uso: VERIFICAR [archivo]"
 
-@requiere_permiso('lectura')
+@requiere_permiso('usuario')
 @validar_argumentos(num_args=1, 
                    mensaje_error="❌ Formato incorrecto. Usa: DESCARGAR nombre_archivo")
 def _cmd_descargar_archivo(partes, directorio_base, usuario_id=None, conexion=None):
@@ -93,8 +94,28 @@ def _cmd_descargar_archivo(partes, directorio_base, usuario_id=None, conexion=No
     nombre_archivo = partes[1]
     return descargar_archivo(directorio_base, nombre_archivo, conexion)
 
+@requiere_permiso('usuario')
+@validar_argumentos(min_args=1, max_args=2, 
+                   mensaje_error="❌ Formato incorrecto. Usa: SUBIR nombre_archivo [sha256]")
+def _cmd_subir_archivo(partes, directorio_base, usuario_id=None, conexion=None):
+    nombre_archivo = partes[1]
+    hash_esperado = partes[2] if len(partes) >= 3 else None
+    return crear_archivo(directorio_base, nombre_archivo, hash_esperado, conexion)
+
 @requiere_permiso('admin')
 @validar_argumentos(num_args=0, 
                    mensaje_error="❌ Formato incorrecto. Usa: LISTAR_USUARIOS")
 def _cmd_listar_usuarios_sistema(partes, directorio_base, usuario_id=None):
     return listar_usuarios_sistema()
+
+@requiere_permiso('usuario')
+def _cmd_estado_archivo(partes, directorio_base, usuario_id=None):
+    """Consulta de estado (solo lectura) sin encolar verificación."""
+    # ESTADO            -> todos
+    # ESTADO nombre.ext -> uno
+    if len(partes) == 1:
+        return estado_todos_en_bd(directorio_base)
+    elif len(partes) == 2:
+        return estado_archivo_en_bd(directorio_base, partes[1])
+    else:
+        return "❌ Uso: ESTADO [archivo]"

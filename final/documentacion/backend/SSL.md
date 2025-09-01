@@ -70,7 +70,7 @@ En el archivo `.env`:
 
 ```env
 SERVER_HOST=192.168.100.131
-SERVER_PORT=5000
+SERVER_PORT=1608
 CERT_PATH=/Users/juanmaaidar/PycharmProjects/computacionII/final/certificados/certificado.pem
 KEY_PATH=/Users/juanmaaidar/PycharmProjects/computacionII/final/certificados/llave.pem
 ```
@@ -98,7 +98,7 @@ scp juanma@192.168.100.131:/Users/juanmaaidar/PycharmProjects/computacionII/fina
 
 ```env
 SERVER_HOST=192.168.100.131
-SERVER_PORT=5000
+SERVER_PORT=1608
 CERT_PATH=/home/juanma/PycharmProjects/computacionII/final/certificados/certificado.pem
 ```
 
@@ -106,7 +106,7 @@ CERT_PATH=/home/juanma/PycharmProjects/computacionII/final/certificados/certific
 
 ```bash
 cd final/servidorArchivos
-python3 main.py -m cliente
+python main.py -m cli
 ```
 
 ---

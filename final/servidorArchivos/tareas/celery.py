@@ -20,20 +20,23 @@ try:
     app = Celery(
         'verificador_archivos',
         broker=BROKER_URL,  # Redis actúa como cola de mensajes
-        backend='rpc://'  # Para retornar resultados desde el worker
+        backend=BACKEND_URL  # Backend para resultados (usar Redis por defecto)
     )
 
     def task_decorator(func):
         return app.task(func)
 
 except ImportError:
-    print("⚠️ Celery no está instalado. Las tareas no se ejecutarán.")
+    print("⚠️ Celery no está instalado. Las tareas se ejecutarán de forma síncrona.")
 
-    # Definir una función que lanzará una excepción si se intenta usar
+    # Decorador que permite invocar la función de manera directa y mediante .delay
     def task_decorator(func):
-        def wrapper(*args, **kwargs):
-            raise ImportError("Celery no está instalado. No se pueden ejecutar tareas asíncronas.")
-        return wrapper
+        def sync_call(*args, **kwargs):
+            return func(*args, **kwargs)
+        def delay(*args, **kwargs):
+            return func(*args, **kwargs)
+        sync_call.delay = delay
+        return sync_call
 
     # Definir app como None para indicar que Celery no está disponible
     app = None
@@ -43,6 +46,7 @@ ESTADO_OK = 'ok'
 ESTADO_CORRUPTO = 'corrupto'
 ESTADO_INFECTADO = 'infectado'
 ESTADO_DESCONOCIDO = 'desconocido'
+ESTADO_PARCIAL = 'parcial'
 
 INTEGRIDAD_VALIDA = 'válida'
 INTEGRIDAD_INVALIDA = 'inválida'
@@ -66,7 +70,17 @@ def verificar_integridad_y_virus(ruta_archivo, hash_esperado=None):
     # 🏁 Inicializar resultado
     resultado = _inicializar_resultado(ruta_archivo)
 
-    # 🔍 Verificar integridad si se proporcionó un hash
+    # Intentar cargar hash esperado desde archivo .hash si no se proporcionó
+    if not hash_esperado:
+        try:
+            ruta_hash = f"{ruta_archivo}.hash"
+            if os.path.exists(ruta_hash):
+                with open(ruta_hash, 'r') as f:
+                    hash_esperado = f.read().strip()
+        except Exception as e:
+            resultado['mensaje'] += f"⚠️ No se pudo leer hash esperado: {e}. "
+
+    # 🔍 Verificar integridad si se tiene un hash esperado
     if hash_esperado:
         _verificar_integridad(resultado, ruta_archivo, hash_esperado)
 
@@ -115,17 +129,21 @@ def _calcular_hash_archivo(ruta_archivo):
 def _verificar_virus(resultado, ruta_archivo):
     try:
         escaneo = subprocess.run(
-            ['clamscan', ruta_archivo], 
-            capture_output=True, 
+            ['clamscan', ruta_archivo],
+            capture_output=True,
             text=True
         )
 
-        if "Infected files: 0" in escaneo.stdout:
+        # Códigos de salida de clamscan: 0 (sin virus), 1 (virus encontrado), 2 (error)
+        if escaneo.returncode == 0:
             resultado['virus'] = VIRUS_LIMPIO
-        else:
+        elif escaneo.returncode == 1:
             resultado['virus'] = VIRUS_INFECTADO
             resultado['estado'] = ESTADO_INFECTADO
             resultado['mensaje'] += '🦠 Archivo infectado. '
+        else:
+            resultado['virus'] = VIRUS_ERROR
+            resultado['mensaje'] += f"⚠️ Error en ClamAV (code {escaneo.returncode}). "
     except FileNotFoundError:
         resultado['virus'] = VIRUS_ERROR
         resultado['mensaje'] += '⚠️ ClamAV no encontrado. '
@@ -135,8 +153,15 @@ def _verificar_virus(resultado, ruta_archivo):
 
 def _actualizar_estado_final(resultado):
     if resultado['estado'] == ESTADO_DESCONOCIDO:
-        resultado['estado'] = ESTADO_OK
-        resultado['mensaje'] = '✅ Archivo verificado con éxito.'
+        # Si hubo errores en integridad o antivirus, marcar verificación parcial
+        if resultado['integridad'] == INTEGRIDAD_ERROR or resultado['virus'] == VIRUS_ERROR:
+            resultado['estado'] = ESTADO_PARCIAL
+            if not resultado['mensaje']:
+                resultado['mensaje'] = '⚠️ Verificación parcial por errores.'
+        else:
+            resultado['estado'] = ESTADO_OK
+            if not resultado['mensaje']:
+                resultado['mensaje'] = '✅ Archivo verificado con éxito.'
 
 def _registrar_evento(resultado):
     try:
@@ -144,7 +169,7 @@ def _registrar_evento(resultado):
         nombre_archivo = os.path.basename(resultado['ruta'])
 
         mensaje_detallado = (
-            f"{resultado['estado'].upper()} - "
+            f"📄 {nombre_archivo}: {resultado['estado'].upper()} - "
             f"Integridad: {resultado['integridad']} - "
             f"Antivirus: {resultado['virus']} - "
             f"{resultado['mensaje']}"

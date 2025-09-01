@@ -6,7 +6,7 @@ Antes de instalar y ejecutar el servidor de archivos, asegúrate de tener instal
 
 - Python 3.7 o superior
 - pip (gestor de paquetes de Python)
-- Redis (para la cola de tareas distribuidas)
+- Redis (opcional, para tareas en segundo plano con Celery)
 
 ## Pasos de Instalación
 
@@ -14,7 +14,7 @@ Antes de instalar y ejecutar el servidor de archivos, asegúrate de tener instal
 
 ```bash
 git clone https://github.com/tu-usuario/computacionII.git
-cd computacionII/proyecto
+cd computacionII
 ```
 
 ### 2. Instalar Dependencias
@@ -33,14 +33,14 @@ Para la comunicación segura, el servidor necesita certificados SSL. La creació
 
 ```bash
 # Crear directorio para certificados si no existe
-mkdir -p servidorArchivos/certificados
-cd servidorArchivos/certificados
+mkdir -p final/certificados
+cd final/certificados
 
 # 1. Generar la clave privada
-openssl genrsa -out clave_privada.key 2048
+openssl genrsa -out llave.pem 2048
 
 # 2. Generar el certificado autofirmado usando la clave privada
-openssl req -x509 -new -nodes -key clave_privada.key -sha256 -days 365 -out certificado.pem
+openssl req -x509 -new -nodes -key llave.pem -sha256 -days 365 -out certificado.pem
 
 # Volver al directorio principal
 cd ../..
@@ -58,11 +58,11 @@ cat > crear_certificado.sh << 'EOF'
 #!/bin/bash
 
 # Crear directorio si no existe
-mkdir -p servidorArchivos/certificados
+mkdir -p final/certificados
 
 # Generar clave privada y certificado
-openssl genrsa -out servidorArchivos/certificados/clave_privada.key 2048
-openssl req -x509 -new -nodes -key servidorArchivos/certificados/clave_privada.key -sha256 -days 365 -out servidorArchivos/certificados/certificado.pem -subj "/C=ES/ST=Estado/L=Ciudad/O=Organización/OU=Unidad/CN=ejemplo.com"
+openssl genrsa -out final/certificados/llave.pem 2048
+openssl req -x509 -new -nodes -key final/certificados/llave.pem -sha256 -days 365 -out final/certificados/certificado.pem -subj "/C=ES/ST=Estado/L=Ciudad/O=Organización/OU=Unidad/CN=ejemplo.com"
 
 echo "✅ Certificado y clave privada creados con éxito"
 EOF
@@ -93,47 +93,44 @@ redis-server.exe
 Para procesar tareas en segundo plano, inicia los workers de Celery:
 
 ```bash
-cd servidorArchivos
-celery -A tareas.celery_app worker --loglevel=info
+cd final/servidorArchivos
+celery -A tareas.celery worker --loglevel=info
 ```
 
 ## Ejecución del Servidor
 
-### Modo Normal (con Threads)
+### Servidor (multi-hilo)
 
 ```bash
-python servidorArchivos/main.py -p 5000 -H 127.0.0.1 -d archivos
+python final/servidorArchivos/main.py -m server -H 127.0.0.1 -p 1608
 ```
 
-### Modo Asíncrono (con asyncio)
+
+### Logs detallados (verbose)
 
 ```bash
-python servidorArchivos/main.py -p 5000 -H 127.0.0.1 -d archivos -a
+python final/servidorArchivos/main.py -m server -v
 ```
 
-### Modo Verbose (logs detallados)
+## Ejecución del Cliente (CLI)
 
 ```bash
-python servidorArchivos/main.py -v
+python final/servidorArchivos/main.py -m cli -H 127.0.0.1 -p 1608
 ```
 
-## Ejecución del Cliente
+## API REST (opcional)
+
+La API REST corre en Flask en 0.0.0.0:5007 y necesita que el servidor esté activo en el host/puerto indicado:
 
 ```bash
-python servidorArchivos/cliente.py -s 127.0.0.1 -p 5000
+python final/servidorArchivos/main.py -m api -H 127.0.0.1 -p 1608
 ```
 
 ## Pruebas
 
-Para ejecutar las pruebas automatizadas:
-
-```bash
-# Pruebas del server normal
-python test_server.py
-
-# Pruebas del server asíncrono
-python test_async_server.py
-```
+Actualmente este repositorio no incluye pruebas automatizadas para el backend.
+- Puedes probar manualmente usando la CLI y verificando logs/DB.
+- Si agregas tests, te recomendamos ubicarlos en final/servidorArchivos/tests/ y documentar cómo ejecutarlos.
 
 ## Solución de Problemas
 

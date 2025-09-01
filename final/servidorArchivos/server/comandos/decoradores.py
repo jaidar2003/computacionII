@@ -10,9 +10,8 @@ from baseDeDatos.db import obtener_conexion
 
 # Niveles de permisos en orden jerárquico
 NIVELES_PERMISOS = {
-    'lectura': 1,
-    'escritura': 2,
-    'admin': 3
+    'usuario': 1,
+    'admin': 2
 }
 
 # Decorador para validar argumentos

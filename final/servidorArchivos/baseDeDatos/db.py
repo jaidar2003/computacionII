@@ -20,7 +20,7 @@ CREATE TABLE IF NOT EXISTS usuarios (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
     username TEXT UNIQUE NOT NULL,
     password TEXT NOT NULL,
-    permisos TEXT DEFAULT 'lectura'
+    permisos TEXT DEFAULT 'usuario'
 )
 '''
 
@@ -82,7 +82,7 @@ def crear_tablas():
 # Las funciones de seguridad se importarán dentro de las funciones que las necesiten
 # para evitar importaciones circulares
 
-def registrar_usuario(username, password, permisos='lectura'):
+def registrar_usuario(username, password, permisos='usuario'):
     if not username or not password:
         return "❌ El nombre de usuario y la contraseña son obligatorios."
 
