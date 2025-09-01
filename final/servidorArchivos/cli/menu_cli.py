@@ -189,8 +189,11 @@ def verificar_archivo():
     print_info("Archivos disponibles:")
     file_list = files.list_files(silent=False) or []  # imprime tabla y devuelve nombres
 
-    # Filtrar .hash
-    file_list = [f for f in file_list if not f.endswith('.hash')]
+    # Filtrar .hash y .sha256
+    file_list = [
+        f for f in file_list
+        if not (f.endswith('.hash') or f.endswith('.sha256'))
+    ]
 
     if not file_list:
         print_warning("No se pudo construir la lista para selección rápida. Puedes escribir el nombre manualmente o verificar todos.")
@@ -201,15 +204,15 @@ def verificar_archivo():
             print(f"{idx}. {name}")
         print("0. Verificar TODOS los archivos")
 
-    # Siempre ofrecer opciones manuales
-
+    # Menú por letras para evitar ambigüedad con los números de arriba
     print(f"\n{BOLD}Opciones:{RESET}")
-    print("1. Verificar un archivo escribiendo el nombre")
-    print("2. Verificar todos los archivos")
+    print("A. Verificar un archivo escribiendo el nombre")
+    print("T. Verificar todos los archivos")
+    print("Q. Volver")
 
-    option = input(f"\n{BOLD}Selecciona una opción (1-2 o número de archivo): {RESET}").strip()
+    option = input(f"\n{BOLD}Selecciona (número de archivo, 0, A/T/Q): {RESET}").strip()
 
-    # Si ingresa un número de la lista
+    # ¿Número? → selección rápida
     if option.isdigit():
         num = int(option)
         if num == 0:
@@ -221,16 +224,20 @@ def verificar_archivo():
             files.verify_file(filename)
             input("\nPresiona Enter para continuar...")
             return
-        # si el número no es válido, cae a las opciones por nombre
+        # número inválido: sigue a evaluar letras
 
-    if option == "1":
+    # ¿Letra? → acciones manuales
+    opt = option.upper()
+    if opt == "A":
         filename = input(f"{BOLD}Nombre del archivo a verificar: {RESET}").strip()
         if not filename:
             print_error("El nombre del archivo es obligatorio")
         else:
             files.verify_file(filename)
-    elif option == "2":
+    elif opt == "T":
         files.verify_file()
+    elif opt == "Q":
+        print_info("Operación cancelada.")
     else:
         print_error("Opción inválida")
 

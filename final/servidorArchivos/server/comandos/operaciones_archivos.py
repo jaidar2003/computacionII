@@ -424,6 +424,9 @@ def verificar_estado_todos_archivos(directorio_base):
             ruta = os.path.join(directorio_base, nombre_archivo)
             if not os.path.isfile(ruta):
                 continue
+            # Omitir archivos de metadatos de hash
+            if nombre_archivo.endswith('.hash') or nombre_archivo.endswith('.sha256'):
+                continue
 
             # Primero intentamos buscar por nombre o ruta
             cursor.execute("""
