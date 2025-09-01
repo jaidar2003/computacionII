@@ -1,7 +1,5 @@
 import os
 import sys
-import hashlib
-import base64
 import logging
 
 # 🔧 Asegurar que el path raíz esté en sys.path antes de cualquier import personalizado
@@ -12,20 +10,9 @@ from baseDeDatos.db import autenticar_usuario, registrar_usuario as db_registrar
 # 🔄 Configuración de logging
 logger = logging.getLogger(__name__)
 
-# 🔒 Constantes para seguridad
-SALT_BYTES = 16  # Tamaño del salt en bytes
-HASH_SEPARATOR = '$'  # Separador entre salt y hash
 
-# 🛡️ Intenta importar bcrypt, si no está disponible, usa una implementación básica con hashlib
-try:
-    import bcrypt
-    USING_BCRYPT = True
-    logger.info("✅ Usando bcrypt para el hash de contraseñas.")
-    print("✅ Usando bcrypt para el hash de contraseñas.")
-except ImportError:
-    USING_BCRYPT = False
-    logger.warning("⚠️ bcrypt no está instalado. Usando implementación básica para el hash de contraseñas.")
-    print("⚠️ bcrypt no está instalado. Usando implementación básica para el hash de contraseñas.")
+import bcrypt
+logger.info("✅ bcrypt habilitado para el hash de contraseñas.")
 
 def autenticar_usuario_en_servidor(username, password):
     try:
@@ -56,58 +43,22 @@ def registrar_usuario(username, password, permisos="lectura"):
 def hash_password(password: str) -> str:
     if not password:
         raise ValueError("❌ La contraseña no puede estar vacía")
-
     try:
-        if USING_BCRYPT:
-            # 🛡️ Usar bcrypt (más seguro)
-            return bcrypt.hashpw(password.encode('utf-8'), bcrypt.gensalt()).decode('utf-8')
-        else:
-            # 🔧 Implementación básica con hashlib y salt
-            return _hash_password_basic(password)
+        return bcrypt.hashpw(password.encode('utf-8'), bcrypt.gensalt()).decode('utf-8')
     except Exception as error:
         logger.error(f"❌ Error al generar hash de contraseña: {error}")
         raise
 
-def _hash_password_basic(password: str) -> str:
-    # Generar salt aleatorio
-    salt = base64.b64encode(os.urandom(SALT_BYTES)).decode('utf-8')
-
-    # Calcular hash
-    h = hashlib.sha256()
-    h.update((password + salt).encode('utf-8'))
-
-    # Devolver en formato "salt$hash"
-    return f"{salt}{HASH_SEPARATOR}{h.hexdigest()}"
 
 def verificar_password(password: str, hashed: str) -> bool:
     if not password or not hashed:
         return False
-
     try:
-        if USING_BCRYPT:
-            # 🛡️ Usar bcrypt (más seguro)
-            return bcrypt.checkpw(password.encode('utf-8'), hashed.encode('utf-8'))
-        else:
-            # 🔧 Implementación básica con hashlib y salt
-            return _verificar_password_basic(password, hashed)
+        return bcrypt.checkpw(password.encode('utf-8'), hashed.encode('utf-8'))
     except Exception as error:
         logger.error(f"❌ Error al verificar contraseña: {error}")
         return False
 
-def _verificar_password_basic(password: str, hashed: str) -> bool:
-    try:
-        # Separar salt y hash
-        salt, hash_value = hashed.split(HASH_SEPARATOR, 1)
-
-        # Calcular hash con la contraseña proporcionada y el salt almacenado
-        h = hashlib.sha256()
-        h.update((password + salt).encode('utf-8'))
-
-        # Comparar hashes
-        return h.hexdigest() == hash_value
-    except Exception as error:
-        logger.debug(f"❌ Error en verificación básica de contraseña: {error}")
-        return False
 
 # Verificar que el script se ejecuta correctamente cuando se llama directamente
 if __name__ == "__main__":

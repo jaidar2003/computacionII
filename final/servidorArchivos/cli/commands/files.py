@@ -9,6 +9,7 @@ from ..utils.visual import (
     format_success, format_error, format_info, format_warning, 
     print_table_header, print_table_row, BOLD, RESET, SUCCESS, ERROR, WARNING, INFO
 )
+from ..utils.utils_cli_format import parse_line_to_file_item, print_file_table
 from tqdm import tqdm
 
 def _parse_verification_summary_line(line):
@@ -139,43 +140,28 @@ def list_files(silent=False):
                 print_info("Usa el comando 'upload' para subir archivos.")
             return file_names
         
-        # Extraer la lista de archivos de la respuesta
-        # La respuesta tiene un formato como:
-        # "✅ Archivos disponibles:\narchivo1.txt (1.23 KB) - 2023-01-01 12:00:00\narchivo2.txt (4.56 KB) - 2023-01-02 12:00:00"
+        # Extraer la lista de archivos de la respuesta (robusto frente a formatos)
         lines = response.split('\n')
-        
-        if not silent:
-            # Mostrar encabezado
-            print_header("ARCHIVOS DISPONIBLES")
-            
-            # Definir anchos de columna
-            widths = [40, 15, 25]
-            
-            # Mostrar encabezado de tabla
-            print_table_header(["Nombre", "Tamaño", "Modificado"], widths)
-        
-        # Procesar archivos
-        for line in lines[1:]:  # Saltar la primera línea que es el encabezado
-            if not line.strip():
+        files_list = []
+
+        # Algunas respuestas pueden incluir una primera línea con encabezado "✅ Archivos disponibles:".
+        # Parseamos todas las líneas y nos quedamos solo con las que representen archivos.
+        for line in lines:
+            item = parse_line_to_file_item(line)
+            if not item:
                 continue
-                
-            # Intentar extraer nombre, tamaño y fecha
-            try:
-                # Formato esperado: "archivo.txt (1.23 KB) - 2023-01-01 12:00:00"
-                name_part = line.split(' (')[0].strip()
-                size_part = line.split(' (')[1].split(')')[0].strip()
-                date_part = line.split(' - ')[1].strip() if ' - ' in line else ""
-                
-                # Agregar nombre a la lista
-                file_names.append(name_part)
-                
-                if not silent:
-                    print_table_row([name_part, size_part, date_part], widths)
-            except IndexError:
-                # Si no se puede parsear, mostrar la línea completa si no es silencioso
-                if not silent:
-                    print(line)
-        
+            files_list.append(item)
+            # Guardar solo el nombre plano (sin indentación) para retornarlo
+            name_clean = item.get('name', '').strip()
+            if name_clean:
+                file_names.append(name_clean)
+
+        if not files_list and not silent:
+            print_warning("No se pudieron parsear archivos desde la respuesta del servidor.")
+
+        if not silent and files_list:
+            print_file_table(files_list, title="ARCHIVOS DISPONIBLES", group_hashes=True)
+
         # Retornar lista de nombres de archivos
         return file_names
         
