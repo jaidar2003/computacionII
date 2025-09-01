@@ -7,7 +7,6 @@ import warnings
 import subprocess
 import ssl
 import socket
-import selectors
 from dotenv import load_dotenv
 
 # 🛡️ Ignorar advertencias de deprecación

@@ -290,37 +290,60 @@ def list_users():
         
         # Procesar cada línea (saltando la primera que es el encabezado)
         for line in lines[1:]:
-            if not line.strip():
+            raw = line.strip()
+            if not raw:
                 continue
-                
-            # Extraer información de la línea
+
             try:
-                # Formato esperado: "ID: 1, Usuario: admin, Permiso: admin"
-                parts = {}
-                for part in line.split(', '):
-                    if ': ' in part:
-                        key, value = part.split(': ', 1)
-                        parts[key.lower()] = value
-                
-                # Colorear según el tipo de permiso
-                user_id = parts.get('id', '')
-                username = parts.get('usuario', '')
-                permission = parts.get('permiso', '')
-                
-                # Destacar el usuario actual
-                if username == session.get("user"):
-                    username = f"{BOLD}{username} (tú){RESET}"
-                
-                # Colorear el permiso
-                if permission.lower() == 'admin':
-                    permission = f"{WARNING}{permission}{RESET}"
+                # Normalizar y limpiar bullets/emojis comunes
+                cleaned = raw
+                for token in ["•", "👤", "👑", "👥", "📊"]:
+                    cleaned = cleaned.replace(token, "")
+                cleaned = cleaned.strip()
+
+                # Separar segmentos: soportar " | " o ", "
+                if " | " in cleaned:
+                    segments = [seg.strip() for seg in cleaned.split("|")]
                 else:
-                    permission = f"{INFO}{permission}{RESET}"
-                
-                print_table_row([user_id, username, permission], widths)
+                    segments = [seg.strip() for seg in cleaned.split(", ")]
+
+                kv = {}
+                for seg in segments:
+                    if ":" in seg:
+                        k, v = seg.split(":", 1)
+                        k = k.strip().lower()
+                        v = v.strip()
+                        # Normalizar claves
+                        if k.startswith("id"):
+                            kv['id'] = v
+                        elif k.startswith("usuario"):
+                            kv['usuario'] = v
+                        elif k.startswith("permiso"):
+                            kv['permiso'] = v
+
+                user_id = kv.get('id', '')
+                username = kv.get('usuario', '')
+                permission = kv.get('permiso', '')
+
+                # Destacar el usuario actual
+                if username == session.get("user") and username:
+                    username = f"{BOLD}{username} (tú){RESET}"
+
+                # Colorear el permiso si presente
+                if permission:
+                    if permission.lower() == 'admin':
+                        permission = f"{WARNING}{permission}{RESET}"
+                    else:
+                        permission = f"{INFO}{permission}{RESET}"
+
+                # Si logramos extraer algo significativo, imprimir fila; si no, fallback
+                if user_id or username or permission:
+                    print_table_row([user_id, username, permission], widths)
+                else:
+                    print(raw)
             except Exception:
                 # Si no se puede parsear, mostrar la línea completa
-                print(line)
+                print(raw)
         
         # Mostrar instrucciones adicionales
         print()

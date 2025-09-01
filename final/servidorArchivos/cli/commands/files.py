@@ -460,19 +460,52 @@ def verify_file(filename=None):
             if not conn:
                 return None
             try:
+                # Evitar bloqueos prolongados
+                try:
+                    conn.settimeout(15)
+                except Exception:
+                    pass
+
                 _authenticate_with_session(conn)
                 receive_prompt(conn)
                 send_response(conn, f'DESCARGAR "{remote_name}"')
+
+                # Leer encabezado con tamaño
                 hdr = conn.recv(1024).decode('utf-8', errors='ignore')
                 if "listo para enviar" not in hdr.lower():
                     return None
+
+                # Parsear tamaño: ... (12345 bytes)
+                import re as _re
+                msz = _re.search(r"\((\d+)\s*bytes\)", hdr)
+                expected_size = int(msz.group(1)) if msz else None
+
+                # Confirmar inicio de transferencia
                 conn.sendall(b"LISTO")
+
+                # Recibir datos
+                bytes_recibidos = 0
                 with open(local_path, "wb") as f:
-                    while True:
-                        data = conn.recv(8192)
-                        if not data:
-                            break
-                        f.write(data)
+                    if expected_size is not None:
+                        while bytes_recibidos < expected_size:
+                            chunk = conn.recv(min(8192, expected_size - bytes_recibidos))
+                            if not chunk:
+                                break
+                            f.write(chunk)
+                            bytes_recibidos += len(chunk)
+                    else:
+                        # Fallback si no se pudo parsear tamaño
+                        while True:
+                            chunk = conn.recv(8192)
+                            if not chunk:
+                                break
+                            f.write(chunk)
+
+                # Enviar confirmación final para que el servidor termine correctamente
+                try:
+                    conn.sendall("✅ Recibido".encode("utf-8"))
+                except Exception:
+                    pass
             finally:
                 try:
                     conn.close()

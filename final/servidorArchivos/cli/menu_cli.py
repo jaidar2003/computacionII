@@ -207,7 +207,7 @@ def verificar_archivo():
     print("1. Verificar un archivo escribiendo el nombre")
     print("2. Verificar todos los archivos")
 
-    option = input(f"\n{BOLD}Selecciona una opción (0-2 o número de archivo): {RESET}").strip()
+    option = input(f"\n{BOLD}Selecciona una opción (1-2 o número de archivo): {RESET}").strip()
 
     # Si ingresa un número de la lista
     if option.isdigit():
