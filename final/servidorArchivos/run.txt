@@ -147,5 +147,3 @@ python main.py -m cli
 
 
 
-celery -A tareas.celery worker --loglevel=info
-
