@@ -8,7 +8,6 @@ import subprocess
 import ssl
 import socket
 import selectors
-import re
 from dotenv import load_dotenv
 
 # 🛡️ Ignorar advertencias de deprecación
@@ -33,20 +32,6 @@ verificar_configuracion_env()
 # ⚙️ Crear tablas si no existen
 crear_tablas()
 
-def actualizar_ip_en_env(nueva_ip):
-    env_path = os.path.join(BASE_DIR, '.env')
-    
-    # Leer el contenido actual del archivo .env
-    with open(env_path, 'r') as file:
-        contenido = file.read()
-    
-    # Reemplazar la IP actual con la nueva IP
-    patron = r'SERVER_HOST=.*'
-    nuevo_contenido = re.sub(patron, f'SERVER_HOST={nueva_ip}', contenido)
-    
-    # Escribir el nuevo contenido al archivo .env
-    with open(env_path, 'w') as file:
-        file.write(nuevo_contenido)
 
 def iniciar_servidor_ssl(host=None, port=None, directorio=None):
     # Usar valores predeterminados si no se proporcionan
@@ -129,11 +114,9 @@ def iniciar_servidor_ssl(host=None, port=None, directorio=None):
             print(f"❌ Si te equivocaste con la dirección IP, el servidor no puede conectarse a {host}")
             print(f"ℹ️ La dirección IP local detectada es: {ip_local}")
             
-            # Actualizar automáticamente la IP en el archivo .env
-            print(f"🔄 Actualizando automáticamente SERVER_HOST={ip_local} en el archivo .env")
-            actualizar_ip_en_env(ip_local)
-            print(f"✅ Archivo .env actualizado correctamente. Reinicia el servidor para aplicar los cambios.")
-            print(f"ℹ️ Para usar esta IP manualmente, ejecuta el servidor con: -H {ip_local}")
+            print("ℹ️ Para arrancar con esta IP sin editar .env, ejecuta:")
+            print(f"   python final/servidorArchivos/main.py -m server -H {ip_local} -p {port}")
+            print("ℹ️ También puedes editar manualmente SERVER_HOST en tu archivo .env si lo deseas.")
             
             # Salir con código de error
             sys.exit(1)
@@ -336,10 +319,8 @@ def _iniciar_modo_servidor(args):
     # Verificar si la IP proporcionada es diferente de la configurada en .env
     ip_env = os.getenv("SERVER_HOST", "127.0.0.1")
     if args.host != ip_env:
-        print(f"   ℹ️  La dirección IP proporcionada ({args.host}) es diferente de la configurada en .env ({ip_env})")
-        print(f"   🔄 Actualizando automáticamente SERVER_HOST={args.host} en el archivo .env")
-        actualizar_ip_en_env(args.host)
-        print(f"   ✅ Archivo .env actualizado correctamente.")
+        print(f"   ℹ️  La IP proporcionada ({args.host}) difiere de la configurada en .env ({ip_env}).")
+        print(f"   ℹ️  Se usará {args.host} solo para esta ejecución. Para persistir, edita SERVER_HOST en .env manualmente.")
     
     if args.host != "127.0.0.1" and args.host != "localhost" and args.host != "0.0.0.0":
         print(f"   ℹ️  Si tienes problemas de conexión, verifica que la dirección IP sea accesible desde tus clientes.")

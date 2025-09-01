@@ -148,16 +148,6 @@ def configuracion_inicial():
     
     return server_host, server_port
 
-def actualizar_ip_en_env(nueva_ip):
-    """Actualiza la dirección IP del servidor en el archivo .env
-    
-    Args:
-        nueva_ip (str): Nueva dirección IP o hostname
-        
-    Returns:
-        bool: True si se actualizó correctamente
-    """
-    return actualizar_configuracion(nueva_ip, None)
 
 def actualizar_configuracion(host=None, port=None):
     """Actualiza la configuración del servidor en el archivo .env
