@@ -101,13 +101,18 @@ def iniciar_servidor_ssl(host=None, port=None, directorio=None):
             hilo = threading.Thread(
                 target=_escuchar_conexiones_socket,
                 args=(sock, contexto, directorio),
-                daemon=True
+                daemon=True,
+                name=f"socket-listener-{'IPv6' if sock.family == socket.AF_INET6 else 'IPv4'}"
             )
             hilos.append(hilo)
             hilo.start()
-            # 🧵 Print informativo de hilo de socket levantado
+            # 🧵 Hilo de socket levantado con PID/TID
             family_type = "IPv6" if sock.family == socket.AF_INET6 else "IPv4"
-            print(f"🧵 Hilo de socket {family_type} levantado")
+            try:
+                import os
+                print(f"🧵 Hilo de socket {family_type} levantado (PID: {os.getpid()}, TID: {hilo.ident})")
+            except Exception:
+                print(f"🧵 Hilo de socket {family_type} levantado")
 
         # Esperar a que los hilos terminen (o usar algún mecanismo de señalización)
         try:
@@ -143,6 +148,12 @@ _ips_conectadas = set()
 def _escuchar_conexiones_socket(servidor, contexto, directorio):
     family_type = "IPv6" if servidor.family == socket.AF_INET6 else "IPv4"
     print(f"👂 Esperando conexiones {family_type} entrantes...")
+    # PID/TID del hilo aceptador
+    try:
+        import os, threading
+        print(f"🧵 Hilo de socket {family_type} activo (PID: {os.getpid()}, TID: {threading.get_ident()})")
+    except Exception:
+        pass
     
     global _ips_conectadas
     
@@ -165,13 +176,19 @@ def _escuchar_conexiones_socket(servidor, contexto, directorio):
                     conexion_ssl = contexto.wrap_socket(conexion, server_side=True)
 
                     # Iniciar hilo para manejar cliente
-                    threading.Thread(
+                    hilo = threading.Thread(
                         target=manejar_cliente,
                         args=(conexion_ssl, direccion, directorio),
-                        daemon=True
-                    ).start()
-                    # 🧵 Print informativo de hilo de cliente levantado
-                    print(f"🧵 Hilo para cliente {ip_cliente} ({family_type}) levantado")
+                        daemon=True,
+                        name=f"cliente-{ip_cliente}"
+                    )
+                    hilo.start()
+                    # 🧵 Print informativo de hilo de cliente levantado con PID/TID
+                    try:
+                        import os
+                        print(f"🧵 Hilo para cliente {ip_cliente} ({family_type}) levantado (PID: {os.getpid()}, TID: {hilo.ident})")
+                    except Exception:
+                        print(f"🧵 Hilo para cliente {ip_cliente} ({family_type}) levantado")
                 except ssl.SSLError as error:
                     logging.error(f"🔒 Error SSL con {ip_cliente}: {error}")
                     conexion.close()

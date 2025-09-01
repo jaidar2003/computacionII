@@ -184,15 +184,7 @@ def _es_nombre_archivo_valido(nombre):
     return not any(c in nombre for c in caracteres_prohibidos)
 
 def _calcular_hash_archivo(ruta_archivo):
-    """
-    Calcula el hash SHA-256 de un archivo.
-    
-    Args:
-        ruta_archivo: Ruta completa al archivo
-        
-    Returns:
-        str: Hash SHA-256 en formato hexadecimal
-    """
+    #
     with open(ruta_archivo, 'rb') as archivo:
         contenido = archivo.read()
         return hashlib.sha256(contenido).hexdigest()

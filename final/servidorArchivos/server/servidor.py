@@ -105,6 +105,14 @@ def manejar_cliente(conexion_ssl, direccion, directorio):
     ip_cliente = direccion[0]
     global _ips_desconectadas
 
+    # Log de PID/TID al iniciar el hilo del cliente
+    try:
+        import os
+        import threading
+        print(f"🧵 Hilo para cliente {ip_cliente} levantado (PID: {os.getpid()}, TID: {threading.get_ident()})")
+    except Exception:
+        pass
+
     cliente_desconectado = False
     try:
         _enviar_mensaje(conexion_ssl, "🌍 Bienvenido al servidor de archivos seguro.\n")
@@ -159,13 +167,19 @@ def _escuchar_conexiones_socket(servidor_sock: socket.socket, contexto_ssl: ssl.
                     pass
                 continue
 
-            threading.Thread(
+            hilo = threading.Thread(
                 target=manejar_cliente,
                 args=(conexion_ssl, direccion, directorio),
-                daemon=True
-            ).start()
-            # 🧵 Print informativo de hilo de cliente levantado
-            print(f"🧵 Hilo para cliente {ip_cliente} ({family_type}) levantado")
+                daemon=True,
+                name=f"cliente-{ip_cliente}"
+            )
+            hilo.start()
+            # 🧵 Print informativo de hilo de cliente levantado con PID/TID
+            try:
+                import os
+                print(f"🧵 Hilo para cliente {ip_cliente} ({family_type}) levantado (PID: {os.getpid()}, TID: {hilo.ident})")
+            except Exception:
+                print(f"🧵 Hilo para cliente {ip_cliente} ({family_type}) levantado")
 
         except Exception as e:
             logging.error(f"❌ Error al aceptar conexión {family_type}: {e}")
